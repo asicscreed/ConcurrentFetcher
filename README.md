@@ -7,9 +7,9 @@
   Add your open source license, GitHub uses MIT license.
 -->
 
-# GitHub Pages
+# ParallelFetcher
 
-_Create a site or blog from your GitHub repositories with GitHub Pages._
+A javascript class for managing parallel fetch requests.
 
 </header>
 
@@ -21,25 +21,29 @@ _Create a site or blog from your GitHub repositories with GitHub Pages._
   Encourage users to open new tabs for steps!
 -->
 
-## Step 1: Enable GitHub Pages
+## Introduction:
+The Fetch Web API is a neat tool for fetching/getting network resources in web applications. And although fetch() is generally easy to use, there are a few nuances in regards to error handling, asynchronous and parallel processing, cancellation and so forth :-)
 
-_Welcome to GitHub Pages and Jekyll :tada:!_
+The ParallelFetcher class addresses the core challenges of concurrent fetching, error handling, and cancellation. The included AbortManager class enhances the control and organization of parallel fetches.
 
-The first step is to enable GitHub Pages on this [repository](https://docs.github.com/en/get-started/quickstart/github-glossary#repository). When you enable GitHub Pages on a repository, GitHub takes the content that's on the main branch and publishes a website based on its contents.
+### Key points:
+<i>Concurrency:</i> The class leverages Promise.all() for efficient parallel execution, optimizing performance.
+<br><i>Error handling:</i> Custom error classes (FetchError, JsonParseError) and  error reporting provide detailed information for debugging and handling failures.
+<br><i>Flexibility:</i> The ability to configure individual fetch options and utilize both callbacks and promises makes the class adaptable to various use cases.
+<br><i>Cancellation:</i> The AbortManager class provides robust cancellation support, allowing for individual and global request cancellation.
+<br><i>Progress tracking:</i> The optional progressCallback enables monitoring the progress of fetch requests.
+<br><i>Encapsulation:</i> The AbortManager encapsulates cancellation logic, promoting cleaner and more maintainable code.
+<!-- Adaptability:</i> The examples demonstrate how to use the class in various environments (browser, Node.js, frontend frameworks, testing). -->
 
-### :keyboard: Activity: Enable GitHub Pages
-
-1. Open a new browser tab, and work on the steps in your second tab while you read the instructions in this tab.
-1. Under your repository name, click **Settings**.
-1. Click **Pages** in the **Code and automation** section.
-1. Ensure "Deploy from a branch" is selected from the **Source** drop-down menu, and then select `main` from the **Branch** drop-down menu.
-1. Click the **Save** button.
-1. Wait about _one minute_ then refresh this page (the one you're following instructions from). [GitHub Actions](https://docs.github.com/en/actions) will automatically update to the next step.
-   > Turning on GitHub Pages creates a deployment of your repository. GitHub Actions may take up to a minute to respond while waiting for the deployment. Future steps will be about 20 seconds; this step is slower.
-   > **Note**: In the **Pages** of **Settings**, the **Visit site** button will appear at the top. Click the button to see your GitHub Pages site.
+### Areas for consideration:
+<i>TypeScript integration:</i> Adding TypeScript type definitions would mprove code maintainability and prevent potential runtime errors.
+<br><i>Advanced progress Tracking:</i> Implement more granular progress tracking, such as byte transfer information for more detailed monitoring.
+<br><i>Stream handling:</i> Adding support for handling response streams, which would be beneficial for large data transfers.
+<br><i>Retry logic:</i> Adding a retry mechanism for failed requests could improve the resilience of the class.
+<br><i>Testing:</i> (More) Extensive unit and integration tests will greatly improve the classes reliability.
+<br><i>Documentation:</i> Expanding the documentation, including JSDoc comments, would make the classes more user-friendly :-)
 
 <footer>
-
 <!--
   <<< Author notes: Footer >>>
   Add a link to get support, GitHub status page, code of conduct, license link.
