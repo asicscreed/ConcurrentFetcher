@@ -1,6 +1,6 @@
 {
   "name": "concurrentfetcher",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A javascript class for managing concurrent fetch requests.",
   "main": "dist/concurrentfetcher.js",
   "types": "dist/concurrentfetcher.d.ts",
