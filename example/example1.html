@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="text/javascript" src="../dist/concurrentfetcher.iife.js"></script>
+<head>
+<body>
+<button onclick="example1();">example1</button>
+<script>
+async function example1() {
+  const requests = [
+    { url: "https://jsonplaceholder.typicode.com/photos/1" },
+    { url: "https://jsonplaceholder.typicode.com/comments/1" }
+  ];
+
+  let errors = {};
+  let results = {};
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  await fetcher.concurrentFetch()
+  .then((response) => {
+    errors = response.errors ?? {};
+    results = response.results ?? {};
+  });
+  if (errors.length > 0) document.write(JSON.stringify(errors));
+  if (results.length > 0) document.write(JSON.stringify(results));
+}
+</script>
+</body>
+</html>

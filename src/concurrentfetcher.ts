@@ -1,5 +1,5 @@
 /**
- * FetchError class to encasulate fetch errors.
+ * FetchError class to encapsulate fetch errors.
  */
 export class FetchError extends Error {
   url: string;
@@ -20,7 +20,7 @@ export class FetchError extends Error {
 }
 
 /**
- * JsonParseError class to encasulate JSON parse errors.
+ * JsonParseError class to encapsulate JSON parse errors.
  */
 export class JsonParseError extends Error {
   url: string;
