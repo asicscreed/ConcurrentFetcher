@@ -28,6 +28,28 @@ Basically you instantiate the class including an array of fetch requests and the
   if (results.length > 0) document.write(JSON.stringify(results));
 ```
 
+And the same example, but with callback:
+
+**JavaScript**:
+```javascript
+  const requests = [
+    { url: "https://jsonplaceholder.typicode.com/photos/1",
+      callback: (uniqueId, data, error, abortManager) => {
+        if (error) document.write(JSON.stringify(error));
+        else document.write(JSON.stringify(data));
+      }
+    },
+    { url: "https://jsonplaceholder.typicode.com/comments/1",
+      callback: (uniqueId, data, error, abortManager) => {
+        if (error) document.write(JSON.stringify(error));
+        else document.write(JSON.stringify(data));
+      }
+    }
+  ];
+
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  fetcher.concurrentFetch();
+```
 
 ## Description:
 
