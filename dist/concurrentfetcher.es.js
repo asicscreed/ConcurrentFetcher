@@ -1,5 +1,3 @@
-'use strict';
-
 class FetchError extends Error {
     constructor(message, url, status) {
         super(message);
@@ -122,7 +120,4 @@ class ConcurrentFetcher {
     }
 }
 
-exports.AbortManager = AbortManager;
-exports.ConcurrentFetcher = ConcurrentFetcher;
-exports.FetchError = FetchError;
-exports.JsonParseError = JsonParseError;
+export { AbortManager, ConcurrentFetcher, FetchError, JsonParseError };

@@ -1,10 +1,14 @@
 {
+    "opts": {
+        "encoding": "utf8",
+        "destination": "./docs/"
+    },
     "tags": {
         "allowUnknownTags": true
     },
     "source": {
         "include": "./dist",
-        "includePattern": "\\.iife\\.js$"
+        "includePattern": "concurrentfetcher.js"
     },
     "plugins": ["plugins/markdown"],
     "templates": {

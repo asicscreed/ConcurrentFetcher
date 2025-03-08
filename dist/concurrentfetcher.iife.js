@@ -1,16 +1,7 @@
 var ConcurrentFetcher = (function (exports) {
     'use strict';
 
-    /**
-     * FetchError class to encasulate fetch errors.
-     */
     class FetchError extends Error {
-        /**
-         * @constructor
-         * @param {string} message - The Fetch request error message
-         * @param {string} url - The url request that failed
-         * @param {number} status - The http error status
-         */
         constructor(message, url, status) {
             super(message);
             this.name = this.constructor.name;
@@ -18,49 +9,22 @@ var ConcurrentFetcher = (function (exports) {
             this.status = status;
         }
     }
-    /**
-     * JsonParseError class to encasulate JSON parse errors.
-     */
     class JsonParseError extends Error {
-        /**
-         * @constructor
-         * @param {string} message - The JSON parse error message
-         * @param {string} url - The url request that failed
-         */
         constructor(message, url) {
             super(message);
             this.name = this.constructor.name;
             this.url = url;
         }
     }
-    /**
-     * AbortManager class to handle more AbortControllers.
-     * @see AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
-     */
     class AbortManager {
-        /**
-         * @constructor
-        */
         constructor() {
             this.controllers = new Map();
         }
-        /**
-         * Creates a new AbortController for a fetch request identified by a Unique Id.
-         *
-         * @param {string} uniqueId - Unique Id (or identifier)
-         * @returns {AbortController.AbortSignal}  - This signal can be passed to the asynchronous request.
-         */
         createSignal(uniqueId) {
             const controller = new AbortController();
             this.controllers.set(uniqueId, controller);
             return controller.signal;
         }
-        /**
-         * Local abort operation.
-         * Aborts the operation associated with the Unique Id.
-         *
-         * @param {string} uniqueId - (optional) Unique Id (or identifier)
-         */
         abort(uniqueId) {
             const controller = this.controllers.get(uniqueId);
             if (controller) {
@@ -68,58 +32,17 @@ var ConcurrentFetcher = (function (exports) {
                 this.controllers.delete(uniqueId);
             }
         }
-        /**
-         * Global abort operation.
-         * Aborts all running and pending requests.
-         */
         abortAll() {
             this.controllers.forEach((controller) => controller.abort());
             this.controllers.clear();
         }
     }
-    /**
-     * ConcurrentFetcher class, which manages concurrent fetch requests and cancellation.
-     *
-     * Built upon:
-     * - Fetch API {@link https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API}
-     * - and AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
-     * @see Fetch API {@link https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API}
-     * @see AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
-     */
     class ConcurrentFetcher {
-        /**
-         * @constructor
-         * @param {array} requests - An array of:
-         * - URL: the URL (or resource) for the fetch request. This can be any one of:
-         *   - a string containing the URL
-         *   - an object, such an instance of URL, which has a stringifier that produces a string containing the URL
-         *   - a Request instance
-         * - (optional) fetch options: an object containing options to configure the request.
-         * - (optional) callback object: callback for the response handling:
-         *   - uniqueId: Either the supplied Request Id or the generated Id.
-         *   - data: result from the request. Is null when an error is raised.
-         *   - error: If not null, then an error have occurred for that request
-         *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
-         * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
-         *   - Generated if not given. Known as uniqueId throughout the solution.
-         */
         constructor(requests) {
             this.requests = requests;
             this.errors = [];
             this.abortManager = new AbortManager();
         }
-        /**
-         * This is the core method that performs concurrent fetching.
-         * @param {callback} progressCallback - (optional):
-         * - progressCallback?:
-         *   - uniqueId: string
-         *   - completedRequestCount: number
-         *   - totalRequestCount: number
-         * @returns {Promise<progressCallback>} - A Promise of an array of ConcurrentFetchResult: results and errors:
-         * - ConcurrentFetchResult[]:
-         *  - results: any[];
-         *  - errors: { uniqueId: string; url: string; error: Error }[];
-         */
         async concurrentFetch({ progressCallback } = {}) {
             const results = [];
             let completedCount = 0;
@@ -192,18 +115,9 @@ var ConcurrentFetcher = (function (exports) {
                 return { results: [], errors: this.errors };
             }
         }
-        /**
-         * Calls AbortManager.abort()
-         * see {@link AbortManager}
-         *
-         */
         abort(uniqueId) {
             this.abortManager.abort(uniqueId);
         }
-        /**
-         * Calls AbortManager.abortAll()
-         * see {@link AbortManager}
-         */
         abortAll() {
             this.abortManager.abortAll();
         }
