@@ -9,6 +9,10 @@ The Fetch Web API is a neat tool for fetching/getting network resources in web a
 The ConcurrentFetcher class addresses the core challenges of concurrent request, error handling, and cancellation.
 </header>
 
+## Availability
+Maintained at github : <link>https://github.com/asicscreed/ConcurrentFetcher</link>
+<br>And published at npm: <link>https://www.npmjs.com/package/concurrentfetcher</link>
+
 ## Usage
 Basically you instantiate the class including an array of fetch requests and then call `concurrentFetch()` in an <i>async</i> context.
 
