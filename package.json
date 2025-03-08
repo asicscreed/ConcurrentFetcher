@@ -8,7 +8,8 @@
     "dist/*"
   ],
   "scripts": {
-    "build": "tsc && rollup dist/concurrentfetcher.js --format iife --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.iife.js && rollup dist/concurrentfetcher.js --format cjs --file dist/concurrentfetcher.cjs && rollup dist/concurrentfetcher.js --format umd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.umd.js",
+    "prebuild": "tsc && node_modules/.bin/jsdoc -c jsdoc.conf.json && rm -f dist/concurrentfetcher.js",
+    "build": "tsc --removeComments && rollup dist/concurrentfetcher.js --format amd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.amd.js && rollup dist/concurrentfetcher.js --format cjs --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.cjs && rollup dist/concurrentfetcher.js --format es --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.es.js && rollup dist/concurrentfetcher.js --format iife --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.iife.js && rollup dist/concurrentfetcher.js --format umd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.umd.js && rollup dist/concurrentfetcher.js --format system --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.system.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
