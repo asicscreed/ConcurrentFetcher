@@ -21,12 +21,10 @@
   ],
   "author": "asicscreed",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "jsdoc": "^4.0.4",
     "tslib": "^2.8.1",
-    "typescript": "^5.8.2"
-  },
-  "devDependencies": {
+    "typescript": "^5.8.2",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
