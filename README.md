@@ -1,30 +1,35 @@
 <header>
 
-<!--
-  <<< Author notes: Course header >>>
-  Include a 1280×640 image, course title in sentence case, and a concise description in emphasis.
-  In your repository settings: enable template repository, add your 1280×640 social image, auto delete head branches.
-  Add your open source license, GitHub uses MIT license.
--->
-
 # ConcurrentFetcher
 
 A javascript class for managing concurrent fetch requests.
 
-</header>
-
-<!--
-  <<< Author notes: Step 1 >>>
-  Choose 3-5 steps for your course.
-  The first step is always the hardest, so pick something easy!
-  Link to docs.github.com for further explanations.
-  Encourage users to open new tabs for steps!
--->
-
-## Introduction:
 The Fetch Web API is a neat tool for fetching/getting network resources in web applications. And although fetch() is generally easy to use, there are a few nuances in regards to error handling, asynchronous and concurrent processing, cancellation and so forth :-)
 
-The ConcurrentFetcher class addresses the core challenges of concurrent fetching, error handling, and cancellation. The included AbortManager class enhances the control and organization of concurrent fetches.
+The ConcurrentFetcher class addresses the core challenges of concurrent request, error handling, and cancellation.
+</header>
+
+## Usage
+Basically you instantiate the class including an array of fetch requests and then call `concurrentFetch()` in an <i>async</i> context.
+
+**JavaScript**:
+```javascript
+  const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
+
+  let errors = {};
+  let results = {};
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  await fetcher.concurrentFetch()
+  .then((response) => {
+    errors = response.errors ?? {};
+    results = response.results ?? {};
+  });
+  if (errors.length > 0) document.write(JSON.stringify(errors));
+  if (results.length > 0) document.write(JSON.stringify(results));
+```
+
+
+## Description:
 
 ### Key points:
 <i>Concurrency:</i> The class leverages Promise.all() for efficient concurrent execution, optimizing performance.
