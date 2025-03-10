@@ -1,18 +1,4 @@
 <header>
-<!--
-  - Should be simple to build:
-    - Clone the package:
-    - npm update (to get dev-dependencies)
-    - npm run build
-      - tsc
-      - jsdoc
-      - rollup
-      - and the minified versions are made with google closure-compiler
-
-  - Except:
-    -  I would like show/link to the JSDoc html-files from GitHub
-    - and publish directly to npm...
--->
 
 # ConcurrentFetcher
 
