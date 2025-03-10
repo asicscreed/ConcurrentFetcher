@@ -1,5 +1,6 @@
 {
   "name": "concurrentfetcher",
+  "homepage": "https://github.com/asicscreed/concurrentfetcher#readme",
   "version": "1.0.3",
   "description": "A javascript class for managing concurrent fetch requests.",
   "main": "dist/concurrentfetcher.js",
@@ -7,9 +8,21 @@
   "files": [
     "dist/*"
   ],
+  "author": {
+    "name": "asicscreed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asicscreed/concurrentfetcher.git"
+  },
+  "bugs": 
+  {
+    "url": "https://github.com/asicscreed/concurrentfetcher/issues"
+  },
   "scripts": {
-    "prebuild": "tsc && node_modules/.bin/jsdoc -c jsdoc.conf.json && rm -f dist/concurrentfetcher.js",
-    "build": "tsc --removeComments && rollup dist/concurrentfetcher.js --format amd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.amd.js && rollup dist/concurrentfetcher.js --format cjs --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.cjs && rollup dist/concurrentfetcher.js --format es --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.es.js && rollup dist/concurrentfetcher.js --format iife --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.iife.js && rollup dist/concurrentfetcher.js --format umd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.umd.js && rollup dist/concurrentfetcher.js --format system --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.system.js",
+    "prebuild": "tsc && node_modules/.bin/jsdoc -c jsdoc.conf.json",
+    "build": "rollup dist/concurrentfetcher.js --format amd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.amd.js && rollup dist/concurrentfetcher.js --format cjs --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.common.js && rollup dist/concurrentfetcher.js --format es --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.es.js && rollup dist/concurrentfetcher.js --format iife --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.iife.js && rollup dist/concurrentfetcher.js --format umd --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.umd.js && rollup dist/concurrentfetcher.js --format system --name \"ConcurrentFetcher\" --file dist/concurrentfetcher.system.js",
+    "postbuild": "node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.amd.js --js_output_file dist/concurrentfetcher.amd.min.js && node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.common.js --js_output_file dist/concurrentfetcher.common.min.js && node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.es.js --js_output_file dist/concurrentfetcher.es.min.js && node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.iife.js --js_output_file dist/concurrentfetcher.iife.min.js && node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.umd.js --js_output_file dist/concurrentfetcher.umd.min.js && node_modules/.bin/google-closure-compiler --emit_use_strict --js dist/concurrentfetcher.system.js --js_output_file dist/concurrentfetcher.system.min.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -19,15 +32,15 @@
     "response",
     "abort"
   ],
-  "author": "asicscreed",
   "license": "MIT",
   "devDependencies": {
-    "jsdoc": "^4.0.4",
-    "tslib": "^2.8.1",
-    "typescript": "^5.8.2",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
-    "rollup": "^4.34.9"
+    "google-closure-compiler": "^20240317.0.0",
+    "jsdoc": "^4.0.4",
+    "rollup": "^4.34.9",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.2"
   }
 }

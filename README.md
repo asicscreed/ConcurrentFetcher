@@ -1,4 +1,18 @@
 <header>
+<!--
+  - Should be simple to build:
+    - Clone the package:
+    - npm update (to get dev-dependencies)
+    - npm run build
+      - tsc
+      - jsdoc
+      - rollup
+      - and the minified versions are made with google closure-compiler
+
+  - Except:
+    -  I would like show/link to the JSDoc html-files from GitHub
+    - and publish directly to npm...
+-->
 
 # ConcurrentFetcher
 
@@ -58,17 +72,16 @@ And the same example, but with callback:
 ## Description:
 
 ### Key points:
-<i>Concurrency:</i> The class leverages Promise.all() for efficient concurrent execution, optimizing performance.
-<br><i>Error handling:</i> Custom error classes (FetchError, JsonParseError) and  error reporting provide detailed information for debugging and handling failures.
+<i>Concurrency:</i> The class leverages Promise.all() for efficient concurrent execution and optimizing performance.
+<br><i>Error handling:</i> Custom error classes (FetchError, JsonParseError) and error reporting provide information for debugging and handling failures.
 <br><i>Flexibility:</i> The ability to configure individual fetch options and utilize both callbacks and promises makes the class adaptable to various use cases.
 <br><i>Cancellation:</i> The AbortManager class provides robust cancellation support, allowing for individual and global request cancellation.
 <br><i>Progress tracking:</i> The optional progressCallback enables monitoring the progress of fetch requests.
-<br><i>Encapsulation:</i> The AbortManager encapsulates cancellation logic, promoting cleaner and more maintainable code.
+<br><i>Retry logic:</i> Retry mechanism for failed requests to improve the resilience of the class.
 
 ### Areas for consideration:
 <i>Advanced progress Tracking:</i> Implement more granular progress tracking, such as byte transfer information for more detailed monitoring.
 <br><i>Stream handling:</i> Adding support for handling response streams, which would be beneficial for large data transfers.
-<br><i>Retry logic:</i> Adding a retry mechanism for failed requests could improve the resilience of the class.
 <br><i>Testing:</i> (More) Extensive unit and integration tests will greatly improve the classes reliability.
 <br><i>Adaptability:</i> Examples to demonstrate how to use the class in various environments (browser, Node.js, frontend frameworks, testing).
 

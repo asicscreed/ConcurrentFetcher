@@ -1,5 +1,6 @@
 # Dev dependencies
 ######################
+lib/*
 node_modules/*
 # Compiled source #
 ###################

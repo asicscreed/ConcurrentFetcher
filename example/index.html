@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>ConcurrentFetcher test</title>
-  <script type="text/javascript" src="../dist/concurrentfetcher.iife.js"></script>
+  <script type="text/javascript" src="../dist/concurrentfetcher.iife.min.js"></script>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -31,16 +31,16 @@ Fetches both <i>photos</i> and <i>comments</i>. The (starting) "Id number to fet
 </p>
 <br><button id="btn2" onclick="void();">runCallbacksAndAbortOne</button><p>
 The parameters are the same as for the above (runCallbacksAndAbortAll) test.
-Except that only <i>photos</i> are requested - and - when many (=100) requests are in process - then request sequence no. 99 will be aborted.
+Except that only <i>photos</i> are requested - and - when 100 requests are in process - then request sequence no. 99 will be aborted.
 <br><b>NB!</b> The single fetch abortion is intended for long-running requests. Therefore this is difficult to achieve, when the backend is responsing fast, which JSONPlaceHolder is. But it should be possible if you perform 100 "No. of requests". And you can't do more than 100 considering the load of the backend...</p>
 <br><button id="btn3"onclick="void();">runWithoutCallback</button><p>
 The parameters are the same as for the above (runCallbacksAndAbortAll) test.
-Except that only <i>comments</i> are requested. Progress will indicate that the requests are processing, but the total response is ready when [await Promise.all(all requests promises)] returns;
-<br>If any error occur then it will be returned together with the results.
+When running without callback there will be only 1 response - and that happens when all requests are done processing. Progress will indicate that the requests are processing - and you will notice that they don't finish in the sequence (req.id) they were started. But the content of the total response will be in sequence!
+<br>If any error occur then it will be returned as part of the total response.
 </p>
-<br><button id="btn4"onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received.
-<br>And calls an invalid url (returns 404) - with and without callback - to show how an error situation is being handled. Check also console.log. Some browers raises the fetch (http) 404 error - others do not...
-<br>No matter which error situation occurs, then it must be (able to be) catched by the solution.</p>
+<br><button id="btn4"onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received. 
+<br>And calls an invalid url (returns 404) - with and without callback - and with and without retry - to show how an error situation is being handled. Check also te console log. Some browers raises the fetch (http) 404 error - others do not...
+<br>No matter which error situation occurs, then it must be (able to be) catched by the solution.</pthe >
 <script>
 
 const idnoInput = document.getElementById('idno');
@@ -84,7 +84,7 @@ runCallbacksAndAbortAll.onclick = async function runCallbacksAndAbortAll() {
   }
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  await fetcher.concurrentFetch({ progressCallback });
+  fetcher.concurrentFetch({ progressCallback });
 }
 
 const runCallbacksAndAbortOne = document.getElementById('btn2');
@@ -104,7 +104,7 @@ runCallbacksAndAbortOne.onclick = async function runCallbacksAndAbortOne() {
     requests.push({
       url: "https://jsonplaceholder.typicode.com/photos/"+reqid,
       fetchOptions: { method: 'GET' },
-      requestId: "req"+reqid,
+      requestId: "myreqid"+reqid,
       callback: (uniqueId, data, error, abortManager) => {
         if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" photos Error: "+error.message+"<br>";
         else photosDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" photos id:"+data.id+" - "+data.title+"<br>";
@@ -119,7 +119,7 @@ runCallbacksAndAbortOne.onclick = async function runCallbacksAndAbortOne() {
       fetcher.abort(requests[99].requestId)
     }, 100);
   }
-  await fetcher.concurrentFetch({ progressCallback });
+  fetcher.concurrentFetch({ progressCallback });
 }
 
 const runWithoutCallback = document.getElementById('btn3');
@@ -136,9 +136,10 @@ runWithoutCallback.onclick = async function runWithoutCallback() {
   const requests = [];
   for (let ii = 0, reqid = 0; ii < noofreq && ii < 100 && ii < (500-getidno); ii++) {
     reqid = getidno+ii;
-    requests.push({
-      url: "https://jsonplaceholder.typicode.com/comments/"+reqid
-    });
+    requests.push(
+        { url: "https://jsonplaceholder.typicode.com/comments/"+reqid },
+        { url: "https://jsonplaceholder.typicode.com/photos/"+reqid }
+    );
   }
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
@@ -152,20 +153,25 @@ runWithoutCallback.onclick = async function runWithoutCallback() {
     });
     // Access individual results from the response.results and response.errors arrays
     if (errors.length > 0) {
-      errorDiv.innerHTML += Date.now()+" - results Error:<br>";
+      progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
+      // errors[n] == {uniqueId, url, error}
       for (let ii = 0; ii < errors.length; ii++) {
-        const error = errors[ii];
-        errorDiv.innerHTML += Date.now()+" - error.count:"+id+" results Error: "+JSON.stringify(error)+"<br>";
+        const err = errors[ii];
+        errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+"<br>";
       }
     }
     if (results.length > 0) {
-      commentsDiv.innerHTML += Date.now()+" - results Result:<br>";
+      progressDiv.innerHTML += Date.now()+" - Result is ready:<br>";
       for (let ii = 0; ii < results.length; ii++) {
         const data = results[ii];
-        commentsDiv.innerHTML += Date.now()+" - result.count:"+ii+" comments id:"+data.id+" - "+data.name+"<br>";
+        if (data.name) {
+            commentsDiv.innerHTML += Date.now()+" - result.count:"+ii+" comments id:"+data.id+" - "+data.name+"<br>";
+        } else {
+            photosDiv.innerHTML += Date.now()+" - result.count:"+ii+" photos id:"+data.id+" - "+data.title+"<br>";
+        }
       }
     } else {
-      commentsDiv.innerHTML += Date.now()+" - results Result Is Empty!<br>";
+      progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
     }
   } catch (error) {
     photosDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED: "+error.message;
@@ -182,17 +188,25 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
     progressDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+": "+completed+"/"+total+"<br>";
   };
   const requests = [
-    { url: "https://httpbin.org/headers", fetchOptions: {
-    credentials: "include",
-    method: "GET",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "User-Agent": "any-name"
-    }}},
+    { url: "https://httpbin.org/headers",
+      fetchOptions: {
+        credentials: "include",
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Accept-Language": "de, en-gb;q=0.8, en;q=0.7"
+        }
+      },
+      callback: (uniqueId, data, error, abortManager) => {
+        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+"<br>";
+        else photosDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" headers:"+JSON.stringify(data)+"<br>";
+      }
+    },
     { url: "https://jsonplaceholder.typicode.com/invalid-url", fetchOptions: { mode: 'cors' } },
     { url: "https://jsonplaceholder.typicode.com/invalid-url/",
       fetchOptions: { method: 'GET' },
+      maxRetries: 1,
       callback: (uniqueId, data, error, abortManager) => {
         if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+"<br>";
         else photosDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" results id:"+data.id+" - "+data.name+"<br>";
@@ -211,21 +225,21 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
     });
     // Access individual results from the response.results and response.errors arrays
     if (errors.length > 0) {
-      errorDiv.innerHTML += Date.now()+" - results Error:<br>";
-      // errors.error: uniqueId, url, error;
+      progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
+      // errors[n] == {uniqueId, url, error}
       for (let ii = 0; ii < errors.length; ii++) {
         const err = errors[ii];
-        errorDiv.innerHTML += Date.now()+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+"<br>";
+        errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+"<br>";
       }
     }
     if (results.length > 0) {
-      commentsDiv.innerHTML += Date.now()+" - results Result:<br>";
+      progressDiv.innerHTML += Date.now()+" - Result is ready:<br>";
       for (let ii = 0; ii < results.length; ii++) {
         const data = results[ii];
         commentsDiv.innerHTML += Date.now()+" - result.count:"+ii+" JSON:"+JSON.stringify(data)+"<br>";
       }
     } else {
-      commentsDiv.innerHTML += Date.now()+" - results Result Is Empty!<br>";
+      progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
     }
   } catch (err) {
     photosDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED: "+err.message;

@@ -1,7 +1,9 @@
+'use strict';
+
 /**
  * FetchError class to encapsulate fetch errors.
  */
-export class FetchError extends Error {
+class FetchError extends Error {
     /**
      * @param {string} message - The Fetch request error message
      * @param {any} url - The url request that failed
@@ -18,7 +20,7 @@ export class FetchError extends Error {
 /**
  * JsonParseError class to encapsulate JSON parse errors.
  */
-export class JsonParseError extends Error {
+class JsonParseError extends Error {
     /**
      * @param {string} message - The JSON parse error message
      * @param {any} url - The url request that failed
@@ -34,7 +36,7 @@ export class JsonParseError extends Error {
  * AbortManager class to handle more AbortControllers.
  * @see AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
  */
-export class AbortManager {
+class AbortManager {
     /**
     */
     constructor() {
@@ -82,7 +84,7 @@ export class AbortManager {
  * @see Fetch API {@link https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API}
  * @see AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
  */
-export class ConcurrentFetcher {
+class ConcurrentFetcher {
     /**
      * @param {array} requests - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
@@ -234,3 +236,8 @@ export class ConcurrentFetcher {
         this.abortManager.abortAll();
     }
 }
+
+exports.AbortManager = AbortManager;
+exports.ConcurrentFetcher = ConcurrentFetcher;
+exports.FetchError = FetchError;
+exports.JsonParseError = JsonParseError;
