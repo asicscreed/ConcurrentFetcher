@@ -13,6 +13,12 @@ The ConcurrentFetcher class addresses the core challenges of concurrent request,
 Maintained at github : <link>https://github.com/asicscreed/ConcurrentFetcher</link>
 <br>And published at npm: <link>https://www.npmjs.com/package/concurrentfetcher</link>
 
+## Install
+
+```shell
+npm install concurrentfetcher
+```
+
 ## Usage
 Basically you instantiate the class including an array of fetch requests and then call `concurrentFetch()` in an <i>async</i> context.
 
