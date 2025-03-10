@@ -1,7 +1,7 @@
 {
   "name": "concurrentfetcher",
   "homepage": "https://github.com/asicscreed/concurrentfetcher#readme",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "A javascript class for managing concurrent fetch requests.",
   "main": "dist/concurrentfetcher.js",
   "types": "dist/concurrentfetcher.d.ts",
@@ -15,8 +15,7 @@
     "type": "git",
     "url": "https://github.com/asicscreed/concurrentfetcher.git"
   },
-  "bugs": 
-  {
+  "bugs": {
     "url": "https://github.com/asicscreed/concurrentfetcher/issues"
   },
   "scripts": {
