@@ -4,7 +4,7 @@
 export class FetchError extends Error {
     /**
      * @param {string} message - The Fetch request error message
-     * @param {any} url - The url request that failed
+     * @param {string | Request} url - The url request that failed
      * @param {number} status - The http error status
      */
     constructor(message, url, status) {
@@ -21,7 +21,7 @@ export class FetchError extends Error {
 export class JsonParseError extends Error {
     /**
      * @param {string} message - The JSON parse error message
-     * @param {any} url - The url request that failed
+     * @param {string | Request} url - The url request that failed
      */
     constructor(message, url) {
         super(message);
@@ -168,7 +168,7 @@ export class ConcurrentFetcher {
      * @returns {Promise<ConcurrentFetchResult>} - A Promise of an array of ConcurrentFetchResult: results and errors:
      * - ConcurrentFetchResult[]:
      *  - results: any[];
-     *  - errors: { uniqueId: string; url: any; error: Error }[];
+     *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
     async concurrentFetch({ progressCallback } = {}) {
         const results = [];

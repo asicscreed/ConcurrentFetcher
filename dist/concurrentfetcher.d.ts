@@ -2,25 +2,25 @@
  * FetchError class to encapsulate fetch errors.
  */
 export declare class FetchError extends Error {
-    url: any;
+    url: string | Request;
     status: number;
     /**
      * @param {string} message - The Fetch request error message
-     * @param {any} url - The url request that failed
+     * @param {string | Request} url - The url request that failed
      * @param {number} status - The http error status
      */
-    constructor(message: string, url: any, status: number);
+    constructor(message: string, url: string | Request, status: number);
 }
 /**
  * JsonParseError class to encapsulate JSON parse errors.
  */
 export declare class JsonParseError extends Error {
-    url: any;
+    url: string | Request;
     /**
      * @param {string} message - The JSON parse error message
-     * @param {any} url - The url request that failed
+     * @param {string | Request} url - The url request that failed
      */
-    constructor(message: string, url: any);
+    constructor(message: string, url: string | Request);
 }
 /**
  * AbortManager class to handle more AbortControllers.
@@ -52,7 +52,7 @@ export declare class AbortManager {
     abortAll(): void;
 }
 interface RequestItem {
-    url: any;
+    url: string | Request;
     fetchOptions?: RequestInit;
     callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
     requestId?: string;
@@ -64,7 +64,7 @@ interface ConcurrentFetchResult {
     results: any[];
     errors: {
         uniqueId: string;
-        url: any;
+        url: string | Request;
         error: Error;
     }[];
 }
@@ -110,7 +110,7 @@ export declare class ConcurrentFetcher {
     /**
       * Retry logic for each individual fetch request
       */
-    fetchWithRetry(url: any, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, retryDelay: number, countRetries?: number): Promise<any>;
+    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, retryDelay: number, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching.
      * @param {callback} progressCallback - (optional):
@@ -121,7 +121,7 @@ export declare class ConcurrentFetcher {
      * @returns {Promise<ConcurrentFetchResult>} - A Promise of an array of ConcurrentFetchResult: results and errors:
      * - ConcurrentFetchResult[]:
      *  - results: any[];
-     *  - errors: { uniqueId: string; url: any; error: Error }[];
+     *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
     concurrentFetch({ progressCallback }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResult>;
     /**

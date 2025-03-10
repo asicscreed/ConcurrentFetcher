@@ -2,15 +2,15 @@
  * FetchError class to encapsulate fetch errors.
  */
 export class FetchError extends Error {
-  url: any;
+  url: string | Request;
   status: number;
 
   /**
    * @param {string} message - The Fetch request error message
-   * @param {any} url - The url request that failed 
+   * @param {string | Request} url - The url request that failed 
    * @param {number} status - The http error status
    */
-  constructor(message: string, url: any, status: number) {
+  constructor(message: string, url: string | Request, status: number) {
     super(message);
     //this.name = this.constructor.name; minified...
     this.name = "FetchError";
@@ -23,13 +23,13 @@ export class FetchError extends Error {
  * JsonParseError class to encapsulate JSON parse errors.
  */
 export class JsonParseError extends Error {
-  url: any;
+  url: string | Request;
 
   /**
    * @param {string} message - The JSON parse error message
-   * @param {any} url - The url request that failed 
+   * @param {string | Request} url - The url request that failed 
    */
-  constructor(message: string, url: any) {
+  constructor(message: string, url: string | Request) {
     super(message);
     //this.name = this.constructor.name; minified...
     this.name = "JsonParseError";
@@ -86,7 +86,7 @@ export class AbortManager {
 }
 
 interface RequestItem {
-  url: any;
+  url: string | Request;
   fetchOptions?: RequestInit;
   callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
   requestId?: string;
@@ -97,7 +97,7 @@ interface RequestItem {
 
 interface ConcurrentFetchResult {
   results: any[];
-  errors: { uniqueId: string; url: any; error: Error }[];
+  errors: { uniqueId: string; url: string | Request; error: Error }[];
 }
 
 interface ConcurrentFetchOptions {
@@ -115,7 +115,7 @@ interface ConcurrentFetchOptions {
  */
 export class ConcurrentFetcher {
   private requests: RequestItem[];
-  private errors: { uniqueId: string; url: any; error: Error }[];
+  private errors: { uniqueId: string; url: string | Request; error: Error }[];
   private abortManager: AbortManager;
 
   /**
@@ -152,7 +152,7 @@ export class ConcurrentFetcher {
   /**
     * Retry logic for each individual fetch request
     */
-  async fetchWithRetry(url: any, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, retryDelay: number, countRetries = 0): Promise<any> {
+  async fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, retryDelay: number, countRetries = 0): Promise<T> {
     try {
       const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
       const response = await fetch(_url, fetchWithSignal);
@@ -200,7 +200,7 @@ export class ConcurrentFetcher {
    * @returns {Promise<ConcurrentFetchResult>} - A Promise of an array of ConcurrentFetchResult: results and errors:
    * - ConcurrentFetchResult[]:
    *  - results: any[];
-   *  - errors: { uniqueId: string; url: any; error: Error }[];
+   *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
    */
   async concurrentFetch({ progressCallback }: ConcurrentFetchOptions = {}): Promise<ConcurrentFetchResult> {
     const results: any[] = [];
