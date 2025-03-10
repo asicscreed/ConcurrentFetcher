@@ -62,6 +62,7 @@ And the same example, but with callback:
 <br><i>Error handling:</i> Custom error classes (FetchError, JsonParseError) and error reporting provide information for debugging and handling failures.
 <br><i>Flexibility:</i> The ability to configure individual fetch options and utilize both callbacks and promises makes the class adaptable to various use cases.
 <br><i>Cancellation:</i> The AbortManager class provides robust cancellation support, allowing for individual and global request cancellation.
+Support for client-controlled cancellation of a single request and of all requests. And timeout controlled cancellation on individual requests.
 <br><i>Progress tracking:</i> The optional progressCallback enables monitoring the progress of fetch requests.
 <br><i>Retry logic:</i> Retry mechanism for failed requests to improve the resilience of the class.
 

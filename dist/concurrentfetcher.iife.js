@@ -102,6 +102,7 @@ var ConcurrentFetcher = (function (exports) {
          *   - Generated if not given. Known as uniqueId throughout the solution.
          * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
          * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
+         * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
          */
         constructor(requests) {
             this.requests = requests;
@@ -120,7 +121,6 @@ var ConcurrentFetcher = (function (exports) {
         async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay, countRetries = 0) {
             try {
                 const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
-                // Maybe a timeout signal? { signal: AbortSignal.any([fetchWithSignal.signal, AbortSignal.timeout(5000)]) }
                 const response = await fetch(_url, fetchWithSignal);
                 if (!response.ok) {
                     throw new FetchError(`Fetch HTTP error! status: ${response.status}`, url, response.status);
@@ -177,12 +177,11 @@ var ConcurrentFetcher = (function (exports) {
             const results = [];
             let completedCount = 0;
             const fetchPromises = this.requests.map((request, index) => {
-                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, retryDelay = 1000 } = request;
-                const uniqueId = requestId !== null && requestId !== void 0 ? requestId : index.toString();
-                const fetchWithSignal = {
-                    ...fetchOptions,
-                    signal: this.abortManager.createSignal(uniqueId),
-                };
+                var _a;
+                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, retryDelay = 1000, abortTimeout = 0 } = request;
+                const uniqueId = (_a = (requestId)) !== null && _a !== void 0 ? _a : index.toString();
+                const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
+                const fetchWithSignal = { ...fetchOptions, signal: abortSignal };
                 return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay)
                     .then((data) => {
                     if (callback) {

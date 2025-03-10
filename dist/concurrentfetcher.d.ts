@@ -58,6 +58,7 @@ interface RequestItem {
     requestId?: string;
     maxRetries?: number;
     retryDelay?: number;
+    abortTimeout?: number;
 }
 interface ConcurrentFetchResult {
     results: any[];
@@ -99,6 +100,7 @@ export declare class ConcurrentFetcher {
      *   - Generated if not given. Known as uniqueId throughout the solution.
      * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
      * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
+     * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
      */
     constructor(requests: RequestItem[]);
     /**
