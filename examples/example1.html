@@ -16,9 +16,9 @@ async function example1() {
   let results = {};
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   await fetcher.concurrentFetch()
-  .then((response) => {
-    errors = response.errors ?? {};
-    results = response.results ?? {};
+  .then((data) => {
+    errors = data.errors ?? {};
+    results = data.results ?? {};
   });
   if (errors.length > 0) document.write(JSON.stringify(errors));
   if (results.length > 0) document.write(JSON.stringify(results));

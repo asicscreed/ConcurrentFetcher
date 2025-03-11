@@ -39,7 +39,7 @@ When running without callback there will be only 1 response - and that happens w
 <br>If any error occur then it will be returned as part of the total response.
 </p>
 <br><button id="btn4"onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received. 
-<br>And calls an invalid url (returns 404) - with and without callback - and with and without retry - to show how an error situation is being handled. Check also te console log. Some browers raises the fetch (http) 404 error - others do not...
+<br>And calls an invalid url (returns 404) - with and without callback - and with and without retry - to show how an error situation is being handled. Check also the console log. Some browers raises the fetch (http) 404 error - others do not...
 <br>No matter which error situation occurs, then it must be (able to be) catched by the solution.</pthe >
 <script>
 
@@ -147,11 +147,11 @@ runWithoutCallback.onclick = async function runWithoutCallback() {
     let errors = {};
     let results = {};
     await fetcher.concurrentFetch({ progressCallback })
-    .then((response) => {
-        errors = response.errors ?? {};
-        results = response.results ?? {};
+    .then((data) => {
+        errors = data.errors ?? {};
+        results = data.results ?? {};
     });
-    // Access individual results from the response.results and response.errors arrays
+    // Access individual results from the data.results and data.errors arrays
     if (errors.length > 0) {
       progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
       // errors[n] == {uniqueId, url, error}
@@ -208,7 +208,7 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
       fetchOptions: { method: 'GET' },
       maxRetries: 1,
       callback: (uniqueId, data, error, abortManager) => {
-        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+"<br>";
+        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+" - "+error.message+"<br>";
         else photosDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" results id:"+data.id+" - "+data.name+"<br>";
       }
     }
@@ -219,17 +219,17 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
     let errors = {};
     let results = {};
     await fetcher.concurrentFetch({ progressCallback })
-    .then((response) => {
-        errors = response.errors ?? {};
-        results = response.results ?? {};
+    .then((data) => {
+        errors = data.errors ?? {};
+        results = data.results ?? {};
     });
-    // Access individual results from the response.results and response.errors arrays
+    // Access individual results from the data.results and data.errors arrays
     if (errors.length > 0) {
       progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
       // errors[n] == {uniqueId, url, error}
       for (let ii = 0; ii < errors.length; ii++) {
         const err = errors[ii];
-        errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+"<br>";
+        errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+" - "+err.error.message+"<br>";
       }
     }
     if (results.length > 0) {

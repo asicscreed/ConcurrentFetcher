@@ -93,11 +93,11 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
     let errors = {};
     let results = {};
     await fetcher.concurrentFetch({ progressCallback })
-    .then((response) => {
-        errors = response.errors ?? {};
-        results = response.results ?? {};
+    .then((data) => {
+        errors = data.errors ?? {};
+        results = data.results ?? {};
     });
-    // Access individual results from the response.results and response.errors arrays
+    // Access individual results from the data.results and data.errors arrays
     if (errors.length > 0) {
       progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
       // errors[n] == {uniqueId, url, error}

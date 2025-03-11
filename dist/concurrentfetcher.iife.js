@@ -122,8 +122,15 @@ var ConcurrentFetcher = (function (exports) {
             try {
                 const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
                 const response = await fetch(_url, fetchWithSignal);
+                //console.log("response.ok =", response.ok);
+                //console.log("response.status =", response.status);
+                //console.log("response.type =", response.type);
+                //console.log("response.url =", response.url);
+                //console.log("response.headers =", response.headers);
+                ////console.log("response.statusText =", response.statusText);
+                ////console.log("response.userFinalURL =", response.useFinalURL);
                 if (!response.ok) {
-                    throw new FetchError(`Fetch HTTP error! status: ${response.status}`, url, response.status);
+                    throw new FetchError('Fetch HTTP error! status: ' + response.status, url, response.status);
                 }
                 let data;
                 const contentType = response.headers.get("content-type");
@@ -148,7 +155,7 @@ var ConcurrentFetcher = (function (exports) {
                 // Successfully fetched data
                 return data;
             }
-            catch (error) {
+            catch (err) {
                 if (maxRetries > 0) {
                     maxRetries--;
                     countRetries++;
@@ -158,7 +165,7 @@ var ConcurrentFetcher = (function (exports) {
                     return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay, countRetries);
                 }
                 // Can't do more...
-                throw error;
+                throw err;
             }
         }
         /**
@@ -191,15 +198,15 @@ var ConcurrentFetcher = (function (exports) {
                         results[index] = data;
                     }
                 })
-                    .catch((error) => {
-                    if (error instanceof SyntaxError) {
-                        error = new JsonParseError(error.message, url);
+                    .catch((err) => {
+                    if (err instanceof SyntaxError) {
+                        err = new JsonParseError(err.message, url);
                     }
                     if (callback) {
-                        callback(uniqueId, null, error, this.abortManager);
+                        callback(uniqueId, null, err, this.abortManager);
                     }
                     else {
-                        this.errors.push({ uniqueId, url, error });
+                        this.errors.push({ uniqueId, url, error: err });
                         results[index] = null;
                     }
                 })
@@ -214,9 +221,9 @@ var ConcurrentFetcher = (function (exports) {
                 const filteredResults = results ? results.filter((result) => result !== null) : [];
                 return { results: filteredResults, errors: this.errors };
             }
-            catch (fetchError) {
-                this.errors.push({ uniqueId: "unknown", url: "unknown", error: fetchError });
-                this.requests.forEach((request) => { var _a, _b; return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : "unknown", null, fetchError, this.abortManager); });
+            catch (err) {
+                this.errors.push({ uniqueId: "unknown", url: "unknown", error: err });
+                this.requests.forEach((request) => { var _a, _b; return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : "unknown", null, err, this.abortManager); });
                 return { results: [], errors: this.errors };
             }
         }

@@ -20,7 +20,14 @@ npm install concurrentfetcher
 ```
 
 ## Usage
-Basically you instantiate the class including an array of fetch requests and then call `concurrentFetch()` in an <i>async</i> context.
+Basically you instantiate the class with an array of fetch requests and then call `concurrentFetch()` in an <i>async</i> context. It calls fetch and consumes the Response object. If a callback is defined it is called for each response. Without callback, the responses (data/error) are collected and returned as a Promise&lt;ConcurrentFetchResults&gt; like this:
+```typescript
+interface ConcurrentFetchResult {
+  results: any[];
+  errors: { uniqueId: string; url: string | Request; error: Error }[];
+}
+```
+The data content have a unique entry in the results array. One for each request that succeeds. If a fetch request fails, then the errors array is added with the a custom FetchError which saves response.status in error.status.   
 
 **JavaScript**:
 ```javascript
@@ -30,9 +37,9 @@ Basically you instantiate the class including an array of fetch requests and the
   let results = {};
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   await fetcher.concurrentFetch()
-  .then((response) => {
-    errors = response.errors ?? {};
-    results = response.results ?? {};
+  .then((data) => {
+    errors = data.errors ?? {};
+    results = data.results ?? {};
   });
   if (errors.length > 0) document.write(JSON.stringify(errors));
   if (results.length > 0) document.write(JSON.stringify(results));

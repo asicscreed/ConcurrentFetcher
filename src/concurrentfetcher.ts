@@ -96,7 +96,9 @@ interface RequestItem {
 }
 
 interface ConcurrentFetchResult {
+  // results could also be { uniqueId: string; data: any }[];
   results: any[];
+  // then errors should be { uniqueId: string; error: Error }[];
   errors: { uniqueId: string; url: string | Request; error: Error }[];
 }
 
@@ -156,8 +158,15 @@ export class ConcurrentFetcher {
     try {
       const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
       const response = await fetch(_url, fetchWithSignal);
+      //console.log("response.ok =", response.ok);
+      //console.log("response.status =", response.status);
+      //console.log("response.type =", response.type);
+      //console.log("response.url =", response.url);
+      //console.log("response.headers =", response.headers);
+      ////console.log("response.statusText =", response.statusText);
+      ////console.log("response.userFinalURL =", response.useFinalURL);
       if (!response.ok) {
-        throw new FetchError(`Fetch HTTP error! status: ${response.status}`, url, response.status);
+        throw new FetchError('Fetch HTTP error! status: '+response.status, url, response.status);
       }
       let data;
       const contentType = response.headers.get("content-type");
@@ -176,7 +185,7 @@ export class ConcurrentFetcher {
       }
       // Successfully fetched data
       return data;
-    } catch (error) {
+    } catch (err) {
       if (maxRetries > 0) {
         maxRetries--;
         countRetries++;
@@ -186,7 +195,7 @@ export class ConcurrentFetcher {
         return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay, countRetries);
       }
       // Can't do more...
-      throw error;
+      throw err;
     }
   }
 
@@ -221,14 +230,14 @@ export class ConcurrentFetcher {
             results[index] = data;
           }
         })
-      .catch((error: Error) => {
-          if (error instanceof SyntaxError) {
-            error = new JsonParseError(error.message, url);
+      .catch((err: Error) => {
+          if (err instanceof SyntaxError) {
+            err = new JsonParseError(err.message, url);
           }
           if (callback) {
-            callback(uniqueId, null, error, this.abortManager);
+            callback(uniqueId, null, err, this.abortManager);
           } else {
-            this.errors.push({ uniqueId, url, error });
+            this.errors.push({ uniqueId, url, error: err });
             results[index] = null;
           }
         })
@@ -244,9 +253,9 @@ export class ConcurrentFetcher {
       const filteredResults = results ? results.filter((result) => result !== null) : [];
 
       return { results: filteredResults, errors: this.errors };
-    } catch (fetchError: any) {
-      this.errors.push({ uniqueId: "unknown", url: "unknown", error: fetchError });
-      this.requests.forEach((request) => request.callback?.(request.requestId ?? "unknown", null, fetchError, this.abortManager));
+    } catch (err: any) {
+      this.errors.push({ uniqueId: "unknown", url: "unknown", error: err });
+      this.requests.forEach((request) => request.callback?.(request.requestId ?? "unknown", null, err, this.abortManager));
       return { results: [], errors: this.errors };
     }
   }
