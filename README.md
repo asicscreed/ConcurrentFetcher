@@ -95,7 +95,7 @@ And call example in Node.js:
           '</div>'
         );
       }).join('');
-    } // data.length
+    } // data.results.length
   })
   .catch(error => console.error(error));  
 ```
@@ -115,7 +115,7 @@ Support for client-controlled cancellation of a single request and of all reques
 <i>Advanced progress Tracking:</i> Implement more granular progress tracking, such as byte transfer information for more detailed monitoring.
 <br><i>Stream handling:</i> Adding support for handling response streams, which would be beneficial for large data transfers.
 <br><i>Testing:</i> (More) Extensive unit and integration tests will greatly improve the classes reliability.
-<br><i>Adaptability:</i> Examples to demonstrate how to use the class in various environments (browser, Node.js, frontend frameworks, testing).
+<br><i>Adaptability:</i> Examples to demonstrate how to use the class in various environments (~~browser~~, ~~Node.js~~, frontend frameworks, testing).
 
 <footer>
 <!--
