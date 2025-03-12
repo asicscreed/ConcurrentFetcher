@@ -32,6 +32,8 @@ _The errors array is added with the unique Id, the request URL and a custom Fetc
 
 **JavaScript**:
 ```javascript
+  // Running in browser with <script src="concurrentfetcher.iife.min.js"></script>
+  // examples/browser/example1.html
   const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
 
   let errors = {};
@@ -50,6 +52,8 @@ And the same example, but with callback:
 
 **JavaScript**:
 ```javascript
+  // Running in browser with <script src="concurrentfetcher.iife.min.js"></script>
+  // examples/browser/example2.html
   const requests = [
     { url: "https://jsonplaceholder.typicode.com/photos/1",
       callback: (uniqueId, data, error, abortManager) => {
@@ -67,6 +71,32 @@ And the same example, but with callback:
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch();
+```
+And call example in Node.js:
+
+**JavaScript**:
+```javascript
+  // Running in Node.js with <script src="concurrentfetcher.umd.min.js"></script>
+  // examples/node/get/input.html
+  const people  = document.getElementById('people');
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  fetcher.concurrentFetch()
+  .then((data) => {
+    if (data.results.length > 0) {
+      people.innerHTML = data.results[0].map((person) => {
+        return (
+          '<div class="text-center mt-3">'+
+            '<h5 class="mt-2 mb-0">'+person.name+'</h5>'+
+            '<span>'+person.email+'</span>'+
+            '<div class="px-4 mt-1">'+
+              '<p class="fonts">'+person.company.catchPhrase+'</p>'+
+            '</div>'+
+          '</div>'
+        );
+      }).join('');
+    } // data.length
+  })
+  .catch(error => console.error(error));  
 ```
 
 ## Description:
