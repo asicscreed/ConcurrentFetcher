@@ -24,7 +24,7 @@ Basically, you instantiate the class with an array of fetch requests and then ca
 It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned as a Promise&lt;ConcurrentFetchResults&gt; as this:
 ```typescript
 interface ConcurrentFetchResult {
-  results: any[];
+  results: any[]; // json, text or blob data
   errors: { uniqueId: string; url: string | Request; error: FetchError }[];
 }
 ```
@@ -82,6 +82,7 @@ And call example in Node.js:
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch()
   .then((data) => {
+    // you should handle if (data.errors.length > 0)
     if (data.results.length > 0) {
       people.innerHTML = data.results[0].map((person) => {
         return (
