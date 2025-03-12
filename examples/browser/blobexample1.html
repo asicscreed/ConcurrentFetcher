@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <title>Testing blob responses with the ConcurrentFetcher javascript class</title>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+  </style>
+</head>
+<body>
+<h1>Testing blob responses with the ConcurrentFetcher javascript class</h1>
+<h3>Backend for the requests is <a href='https://dummyjson.com/docs/image#image-identicon'>DummyJSON identicon</a></h3>
+<h4>Demonstrates fetching png images as blob data responses...</h4>
+<label for='identicon'>Text to identicon:</label>
+<input type='text' name='identicon' id='identicon' value='hello'/>
+<br><label for='noofreq'>No. of requests:</label>
+<input type='number' name='noofreq' id='noofreq' value='1' min='1' max='5'/>
+<br><div id='container'></div>
+<br><u>ERRORS:</u><br><code id='errorsCode'></code>
+<br><u>PROGRESS:</u><br><code id='progressCode'></code>
+<br>
+<br><button id='btn1' onclick='void();'>getIdenticon</button>
+<script>
+const container = document.getElementById('container');
+
+const identiconInput = document.getElementById('identicon');
+const noofreqInput = document.getElementById('noofreq');
+
+const progressDiv = document.getElementById('progressCode');
+const errorDiv = document.getElementById('errorsCode');
+
+const getIdenticon = document.getElementById('btn1');
+getIdenticon.onclick = async function getIdenticon() {
+  const noofreq = parseInt(noofreqInput.value);
+  const identiconStr = identiconInput.value.trim();
+  progressDiv.innerHTML = '';
+  errorDiv.innerHTML = '';
+  while (container.firstChild) { container.removeChild(container.lastChild); }
+
+  const progressCallback = (uniqueId, completed, total) => {
+    progressDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+': '+completed+'/'+total+'<br>';
+  };
+
+  //// https://dummyjson.com/icon/HASH/SIZE/?type=png (or svg)
+  const reqStr = 'req';
+  const requests = [];
+  const hashInit = Math.floor(Math.random() * 55)
+  for (let ii = 0; ii < noofreq && ii < 5; ii++) {
+    const hashNo = 100+hashInit+ii;
+    const hash = (identiconStr === '') ? 'hello'+hashNo : identiconStr+hashNo;
+    requests.push({
+      url: `https://dummyjson.com/icon/${hash}/150`,
+      requestId: reqStr+ii,
+      callback: (uniqueId, data, error, abortManager) => {
+        if (error) {
+          errorDiv.innerHTML += Date.now()+' - req.id: '+uniqueId+' errors Error: '+error.message+'<br>';
+        } else {
+          const objectURL = URL.createObjectURL(data);
+          const img = document.createElement('img');
+          img.src = objectURL;
+          img.onload = () => {
+            try {
+              URL.revokeObjectURL(img.src);
+            } catch (err) {
+              console.log('error in revokeObjectURL: '+err.message);
+            }
+          }
+          container.appendChild(img);
+          progressDiv.innerHTML += Date.now()+' - req.id: '+uniqueId+' identicon size: '+data.size+' - type: '+data.type+'<br>';
+        }
+      }
+    });
+  } // for ii
+
+  const startTime = Date.now();
+  progressDiv.innerHTML += startTime+' starting with '+requests.length+' identicons<br>';
+
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  await fetcher.concurrentFetch({ progressCallback });
+
+  const endTime = Date.now();
+  progressDiv.innerHTML += endTime+' finished in '+Math.floor(endTime-startTime)+'ms.<br>';
+}
+</script>
+</body>
+</html>

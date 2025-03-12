@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type="text/javascript" src="../dist/concurrentfetcher.iife.min.js"></script>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
 <head>
 <body>
 <button onclick="example1();">example1</button>
 <script>
 async function example1() {
+  // ./example/browser/example1.html
   const requests = [
     { url: "https://jsonplaceholder.typicode.com/photos/1" },
     { url: "https://jsonplaceholder.typicode.com/comments/1" }

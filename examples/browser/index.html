@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>ConcurrentFetcher test</title>
-  <script type="text/javascript" src="../dist/concurrentfetcher.iife.min.js"></script>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -33,12 +33,12 @@ Fetches both <i>photos</i> and <i>comments</i>. The (starting) "Id number to fet
 The parameters are the same as for the above (runCallbacksAndAbortAll) test.
 Except that only <i>photos</i> are requested - and - when 100 requests are in process - then request sequence no. 99 will be aborted.
 <br><b>NB!</b> The single fetch abortion is intended for long-running requests. Therefore this is difficult to achieve, when the backend is responsing fast, which JSONPlaceHolder is. But it should be possible if you perform 100 "No. of requests". And you can't do more than 100 considering the load of the backend...</p>
-<br><button id="btn3"onclick="void();">runWithoutCallback</button><p>
+<br><button id="btn3" onclick="void();">runWithoutCallback</button><p>
 The parameters are the same as for the above (runCallbacksAndAbortAll) test.
 When running without callback there will be only 1 response - and that happens when all requests are done processing. Progress will indicate that the requests are processing - and you will notice that they don't finish in the sequence (req.id) they were started. But the content of the total response will be in sequence!
 <br>If any error occur then it will be returned as part of the total response.
 </p>
-<br><button id="btn4"onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received. 
+<br><button id="btn4" onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received. 
 <br>And calls an invalid url (returns 404) - with and without callback - and with and without retry - to show how an error situation is being handled. Check also the console log. Some browers raises the fetch (http) 404 error - others do not...
 <br>No matter which error situation occurs, then it must be (able to be) catched by the solution.</pthe >
 <script>
@@ -219,7 +219,7 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
     let errors = {};
     let results = {};
     await fetcher.concurrentFetch({ progressCallback })
-    .then((data) => {
+    .then(function (data) {
         errors = data.errors ?? {};
         results = data.results ?? {};
     });

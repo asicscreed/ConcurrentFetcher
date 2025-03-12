@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type="text/javascript" src="../dist/concurrentfetcher.iife.min.js"></script>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
 <head>
 <body>
 <button onclick="example2();">example2</button>
 <script>
 async function example2() {
+  // ./example/browser/example2.html
   const requests = [
     { url: "https://jsonplaceholder.typicode.com/photos/1",
       callback: (uniqueId, data, error, abortManager) => {
