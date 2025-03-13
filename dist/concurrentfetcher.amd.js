@@ -121,11 +121,14 @@ define(['exports'], (function (exports) { 'use strict';
             try {
                 const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
                 const response = await fetch(_url, fetchWithSignal);
-                //console.log("response.ok =", response.ok);
-                //console.log("response.status =", response.status);
-                //console.log("response.type =", response.type);
                 //console.log("response.url =", response.url);
-                //console.log("response.headers =", response.headers);
+                //console.log("response.type =", response.type);
+                //console.log("response.status =", response.status);
+                //if (response.headers) {
+                //    response.headers.forEach((value, key) => {
+                //        console.log("response.header =", `${key} ==> ${value}`);
+                //    });
+                //}
                 ////console.log("response.statusText =", response.statusText);
                 ////console.log("response.userFinalURL =", response.useFinalURL);
                 if (!response.ok) {
@@ -134,19 +137,16 @@ define(['exports'], (function (exports) { 'use strict';
                 let data;
                 const contentType = response.headers.get("content-type");
                 if (contentType && contentType.includes("application/json")) {
-                    data = await response.json();
+                    const response2 = response.clone();
+                    try {
+                        data = await response.json();
+                    }
+                    catch (e) {
+                        data = await response2.text();
+                    }
                 }
-                else if (contentType && contentType.includes("text/html")) {
+                else if (contentType && contentType.includes("text/")) {
                     data = await response.text();
-                }
-                else if (contentType && contentType.includes("text/plain")) {
-                    data = await response.text();
-                }
-                else if (contentType && contentType.includes("image/")) {
-                    data = await response.blob();
-                }
-                else if (contentType && contentType.includes("application/octet-stream")) {
-                    data = await response.blob();
                 }
                 else {
                     data = await response.blob();
@@ -187,7 +187,21 @@ define(['exports'], (function (exports) { 'use strict';
                 const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, retryDelay = 1000, abortTimeout = 0 } = request;
                 const uniqueId = (_a = (requestId)) !== null && _a !== void 0 ? _a : index.toString();
                 const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
-                const fetchWithSignal = { ...fetchOptions, signal: abortSignal };
+                // Default options (can be overridden)
+                // including Representation header: Content-Type
+                const defaultOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json; charset: UTF-8',
+                        'mode': 'cors'
+                    },
+                    signal: abortSignal
+                };
+                const fetchWithSignal = { ...defaultOptions, ...fetchOptions }; // signal: abortSignal
+                // Must remove 'Content-Type': 'multipart/form-data', since server expects:
+                // Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryyEmKNDsBKjB7QEqu
+                //console.log("Request options =", fetchWithSignal);
                 return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay)
                     .then((data) => {
                     if (callback) {

@@ -119,7 +119,7 @@ try {
             $waittime = 0;
             if (isset($REFPARAMS['timeout'])) { 
                 $waittime = intval($REFPARAMS['timeout']);
-                if ($waittime > 0 && $waittime < 90) {
+                if ($waittime > 0 && $waittime <= 90) {
                     sleep($waittime);
                     $data = 'Successfully waited for '.$waittime.' second(s)';
                     $actionrequest = true;
