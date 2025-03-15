@@ -21,7 +21,26 @@ npm install concurrentfetcher
 
 ## Usage
 Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. For browsers it must be in an <i>async</i> context.
-It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned as a Promise&lt;ConcurrentFetchResults&gt; as this:
+It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned.
+
+Browser example without callback (src="concurrentfetcher.iife.min.js"):
+
+**JavaScript**: [Example1](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example1.html)
+```javascript
+const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
+
+const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+fetcher.concurrentFetch()
+.then((data) => {
+  const errors = data.errors ?? {};
+  const results = data.results ?? {};
+  if (errors.length > 0) document.write(JSON.stringify(errors));
+  if (results.length > 0) document.write(JSON.stringify(results));
+})
+```
+
+When data is returned without callback (as above), then data is a Promise&lt;ConcurrentFetchResults&gt; as this:
+
 ```typescript
 interface ConcurrentFetchResult {
   results: any[]; // json, text or blob data
@@ -30,76 +49,81 @@ interface ConcurrentFetchResult {
 ```
 _The errors array is added with the unique Id, the request URL and a custom FetchError which sets error.status as response.status. The result array contains what is in the Response objects_ 
 
-**JavaScript**:
+Same currentFetch example, but with callback (src="concurrentfetcher.iife.min.js"):
+
+**JavaScript**: [Example2](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example2.html)
 ```javascript
-  // Running in browser with <script src="concurrentfetcher.iife.min.js"></script>
-  // examples/browser/example1.html
-  const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
-
-  let errors = {};
-  let results = {};
-  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  await fetcher.concurrentFetch()
-  .then((data) => {
-    errors = data.errors ?? {};
-    results = data.results ?? {};
-  });
-  if (errors.length > 0) document.write(JSON.stringify(errors));
-  if (results.length > 0) document.write(JSON.stringify(results));
-```
-
-And the same example, but with callback:
-
-**JavaScript**:
-```javascript
-  // Running in browser with <script src="concurrentfetcher.iife.min.js"></script>
-  // examples/browser/example2.html
-  const requests = [
-    { url: "https://jsonplaceholder.typicode.com/photos/1",
-      callback: (uniqueId, data, error, abortManager) => {
-        if (error) document.write(JSON.stringify(error));
-        else document.write(JSON.stringify(data));
-      }
-    },
-    { url: "https://jsonplaceholder.typicode.com/comments/1",
-      callback: (uniqueId, data, error, abortManager) => {
-        if (error) document.write(JSON.stringify(error));
-        else document.write(JSON.stringify(data));
-      }
+const requests = [
+  { url: "https://jsonplaceholder.typicode.com/photos/1",
+    callback: (uniqueId, data, error, abortManager) => {
+      if (error) document.write(JSON.stringify(error));
+      else document.write(JSON.stringify(data));
     }
-  ];
+  },
+  { url: "https://jsonplaceholder.typicode.com/comments/1",
+    callback: (uniqueId, data, error, abortManager) => {
+      if (error) document.write(JSON.stringify(error));
+      else document.write(JSON.stringify(data));
+    }
+  }
+];
 
-  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch();
+const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+fetcher.concurrentFetch()
+...
 ```
-And call example in Node.js:
 
-**JavaScript**:
+Hosted in Node.js with: concurrentfetcher.umd.min.js
+
+**JavaScript**: [Node.js](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/get/index.html)
 ```javascript
-  // Running in Node.js with <script src="concurrentfetcher.umd.min.js"></script>
-  // examples/node/get/input.html
-  const people  = document.getElementById('people');
+const people  = document.getElementById('people');
+const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+fetcher.concurrentFetch()
+.then((data) => {
+  // you should handle if (data.errors.length > 0)
+  if (data.results.length > 0) {
+    people.innerHTML = data.results[0].map((person) => {
+      return (
+        '<div class="text-center mt-3">'+
+          '<h5 class="mt-2 mb-0">'+person.name+'</h5>'+
+          '<span>'+person.email+'</span>'+
+          '<div class="px-4 mt-1">'+
+            '<p class="fonts">'+person.company.catchPhrase+'</p>'+
+          '</div>'+
+        '</div>'
+      );
+    }).join('');
+  } // data.results.length
+})
+.catch(error => console.error(error));  
+```
+
+Loaded in RequireJS with: concurrentfetcher.amd.min.js
+
+**JavaScript**: [RequireJS](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/amd/index.html)
+```javascript
+requirejs.config({ paths: { ConcurrentFetcher: '/concurrentfetcher.amd.min' }});
+requirejs(['ConcurrentFetcher'], function (ConcurrentFetcher) {
+  const requests = [
+      {
+          url: 'https://api.github.com/users/asicscreed',
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+      }
+  ];
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch()
-  .then((data) => {
-    // you should handle if (data.errors.length > 0)
-    if (data.results.length > 0) {
-      people.innerHTML = data.results[0].map((person) => {
-        return (
-          '<div class="text-center mt-3">'+
-            '<h5 class="mt-2 mb-0">'+person.name+'</h5>'+
-            '<span>'+person.email+'</span>'+
-            '<div class="px-4 mt-1">'+
-              '<p class="fonts">'+person.company.catchPhrase+'</p>'+
-            '</div>'+
-          '</div>'
-        );
-      }).join('');
-    } // data.results.length
+  .then(function (data) {
+      if (data.results.length > 0) {
+          user = data.results[0];
+          document.getElementById('useravatar').src = user.avatar_url;
+          document.getElementById('username').innerHTML = user.login;
+      }
   })
-  .catch(error => console.error(error));  
 ```
-
 ## Documentation:
 Currently, all documentation is located in the docs folder. It is generated by JSDoc, and is therefore regular html documents.
 
@@ -111,6 +135,7 @@ Currently, all documentation is located in the docs folder. It is generated by J
 Support for client-controlled cancellation of a single request and of all requests. And timeout controlled cancellation on individual requests.
 <br><i>Progress tracking:</i> The optional progressCallback enables monitoring the progress of fetch requests.
 <br><i>Retry logic:</i> Retry mechanism for failed requests to improve the resilience of the class.
+<br><i>Large data handling:</i> Utilizes response.body to read large data in chunks.
 
 ### Areas for consideration:
 <i>Advanced progress Tracking:</i> Implement more granular progress tracking, such as byte transfer information for more detailed monitoring.
