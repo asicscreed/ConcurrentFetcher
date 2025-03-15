@@ -141,6 +141,7 @@ body {
 <body>
 <h1>Test of abort.timeout/cancellation concepts in the ConcurrentFetcher javascript class</h1>
 <h3>Backend for the requests are hosted locally at <a href="../phpbackend/phpservice.php?action=sayhello">phpservice.php</a> (max. wait 90 seconds) or at <a href="https://dummyjson.com">DummyJSON</a> (max. wait 5 seconds)</h3>
+<p>[<a href="./">BACK TO START</a>]</p>
 <label for="backend">Choose backend:</label>
 <select name="backend" id="backend">
   <option value="phpservice">Local PHP server</option>
@@ -180,6 +181,7 @@ Perform the tests by selecting eiher DummyJSON as backend or have a working back
 </p>
 <div id="loading" class="loading" onClick="hideSpinner()" style="visibility=hidden">Loading&#8230;</div>
 <script>
+'option strict';
 const loadingDiv = document.getElementById("loading");
 const backendSelect = document.getElementById('backend');
 const phpTimeoutInput = document.getElementById('phpTimeout');
@@ -200,7 +202,7 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
   result1Div.innerHTML = '';
   result2Div.innerHTML = '';
   errorDiv.innerHTML = '';
-  const progressCallback = (uniqueId, completed, total) => {
+  const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
     progressDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+": "+completed+"/"+total+"<br>";
   };
   let reqUrl;
@@ -232,20 +234,17 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
     requestId: "uid"+reqcounter
   });
   loadingDiv.style.visibility = "visible";
+  const starttime = Date.now();
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   if (got_userTimeout > 0) {
     for (let ii = requests.length-1; ii >= 0; ii--) {
       setTimeout(() => { fetcher.abort(requests[ii].requestId) }, (1000*got_userTimeout)+(10*ii));
     }
   }
-  try {
-    let errors = {};
-    let results = {};
-    await fetcher.concurrentFetch({ progressCallback })
-    .then((data) => {
-        errors = data.errors ?? {};
-        results = data.results ?? {};
-    });
+  fetcher.concurrentFetch({ progressCallback })
+  .then((data) => {
+    const errors = data.errors ?? {};
+    const results = data.results ?? {};
     // Access individual results from the data.results and data.errors arrays
     if (errors.length > 0) {
       progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
@@ -254,11 +253,8 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
         const err = errors[ii];
         errorDiv.innerHTML += Date.now()+" - Response.errors req.id:"+err.uniqueId+" - error.count:"+ii+" Error: "+err.error.message+"<br>";
       }
-    } else {
-      progressDiv.innerHTML += Date.now()+" - Error is empty!<br>";
     }
     if (results.length > 0) {
-      progressDiv.innerHTML += Date.now()+" - Result is ready:<br>";
       for (let ii = 0; ii < results.length; ii++) {
         const data = results[ii];
         result2Div.innerHTML += Date.now()+" - Response.results count:"+ii+" data:"+JSON.stringify(data)+"<br>";
@@ -266,11 +262,13 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
     } else {
       progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
     }
-  } catch (error) {
-    errorDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED: "+error.message;
-  } finally {
+    progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
     loadingDiv.style.visibility = "hidden";
-  }
+  })
+  .catch((e) => {
+      loadingDiv.style.visibility = "hidden";
+      progressDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message;
+  });
 }
 </script>
 </body>

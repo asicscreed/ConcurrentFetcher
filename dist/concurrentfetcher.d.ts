@@ -51,16 +51,18 @@ export declare class AbortManager {
      */
     abortAll(): void;
 }
-interface RequestItem {
+export interface RequestItem {
     url: string | Request;
     fetchOptions?: RequestInit;
     callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
     requestId?: string;
     maxRetries?: number;
+    statusCodesToRetry?: number[][];
     retryDelay?: number;
     abortTimeout?: number;
+    cutoffAmount?: number;
 }
-interface ConcurrentFetchResult {
+export interface ConcurrentFetchResponse {
     results: any[];
     errors: {
         uniqueId: string;
@@ -68,8 +70,8 @@ interface ConcurrentFetchResult {
         error: Error;
     }[];
 }
-interface ConcurrentFetchOptions {
-    progressCallback?: (uniqueId: string, completedRequestCount: number, totalRequestCount: number) => void;
+export interface ConcurrentFetchOptions {
+    progressCallback?: (uniqueId: string, completedRequestCount: number, totalRequestCount: number, completedByteCount: number, totalByteCount: number) => void;
 }
 /**
  * ConcurrentFetcher class, which manages concurrent fetch requests and cancellation.
@@ -99,8 +101,11 @@ export declare class ConcurrentFetcher {
      * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
      *   - Generated if not given. Known as uniqueId throughout the solution.
      * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
+     * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
+     *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
      * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
      * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
+     * - (optional) cutoffAmount: when response content is bigger than cutoffAmount, then reading will be buffered. If 0 (zero) then reading will not be buffered.
      */
     constructor(requests: RequestItem[]);
     /**
@@ -110,7 +115,7 @@ export declare class ConcurrentFetcher {
     /**
       * Retry logic for each individual fetch request
       */
-    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, retryDelay: number, countRetries?: number): Promise<T>;
+    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching.
      * @param {callback} progressCallback - (optional):
@@ -118,12 +123,18 @@ export declare class ConcurrentFetcher {
      *   - uniqueId: string
      *   - completedRequestCount: number
      *   - totalRequestCount: number
-     * @returns {Promise<ConcurrentFetchResult>} - A Promise of an array of ConcurrentFetchResult: results and errors:
-     * - ConcurrentFetchResult[]:
+     * @returns {Promise<ConcurrentFetchResponse>} - A Promise of an array of ConcurrentFetchResponse: results and errors:
+     * - ConcurrentFetchResponse[]:
      *  - results: any[];
      *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
-    concurrentFetch({ progressCallback }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResult>;
+    concurrentFetch({ progressCallback }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResponse>;
+    /**
+     *  Check whether or not a retry-condition is met.
+     *  Based on the response.status and the statusCodesToRetry configured.
+     *
+     */
+    shouldRetryRequest(responseStatus: number, maxRetries: number, statusCodesToRetry: number[][], countRetries: number): boolean;
     /**
      * Calls AbortManager.abort()
      * see {@link AbortManager}
@@ -136,4 +147,3 @@ export declare class ConcurrentFetcher {
      */
     abortAll(): void;
 }
-export {};

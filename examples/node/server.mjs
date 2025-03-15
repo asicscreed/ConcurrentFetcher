@@ -95,12 +95,20 @@ server = http.createServer(function (req, res) {
     pipeFileToResponse(res, '../../dist/concurrentfetcher.umd.min.js', 'text/javascript');
     return;
   }
+  if (/concurrentfetcher\.umd\.js$/.test(url)) {
+    pipeFileToResponse(res, '../../dist/concurrentfetcher.umd.js', 'text/javascript');
+    return;
+  }
   //if (/concurrentfetcher\.umd\.min\.map$/.test(url)) {
   //  pipeFileToResponse(res, '../dist/concurrentfetcher.umd.min.map', 'text/javascript');
   //  return;
   //}
   if (/concurrentfetcher\.amd\.min\.js$/.test(url)) {
     pipeFileToResponse(res, '../../dist/concurrentfetcher.amd.min.js', 'text/javascript');
+    return;
+  }
+  if (/concurrentfetcher\.amd\.js$/.test(url)) {
+    pipeFileToResponse(res, '../../dist/concurrentfetcher.amd.js', 'text/javascript');
     return;
   }
   //if (/concurrentfetcher\.amd\.min\.map$/.test(url)) {

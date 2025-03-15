@@ -100,8 +100,11 @@ define(['exports'], (function (exports) { 'use strict';
          * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
          *   - Generated if not given. Known as uniqueId throughout the solution.
          * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
+         * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
+         *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
          * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
          * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
+         * - (optional) cutoffAmount: when response content is bigger than cutoffAmount, then reading will be buffered. If 0 (zero) then reading will not be buffered.
          */
         constructor(requests) {
             this.requests = requests;
@@ -117,7 +120,8 @@ define(['exports'], (function (exports) { 'use strict';
         /**
           * Retry logic for each individual fetch request
           */
-        async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay, countRetries = 0) {
+        async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries = 0) {
+            let responseStatus = 200;
             try {
                 const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
                 const response = await fetch(_url, fetchWithSignal);
@@ -131,40 +135,87 @@ define(['exports'], (function (exports) { 'use strict';
                 //}
                 ////console.log("response.statusText =", response.statusText);
                 ////console.log("response.userFinalURL =", response.useFinalURL);
+                responseStatus = response.status;
                 if (!response.ok) {
                     throw new FetchError('Fetch HTTP error! status: ' + response.status, url, response.status);
                 }
+                let contentType = '';
+                let contentLength = 0;
+                if (response.headers) {
+                    response.headers.forEach((value, key) => {
+                        //console.log("response.header =", `${key} ==> ${value}`);
+                        if (key.toLowerCase() == "content-type") {
+                            contentType = value.toLowerCase();
+                        }
+                        else if (key.toLowerCase() == "content-length") {
+                            contentLength = parseInt(value);
+                        }
+                    });
+                }
                 let data;
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
+                //const contentType = response.headers.get("content-type");
+                if (contentType.includes("application/json")) {
                     const response2 = response.clone();
                     try {
                         data = await response.json();
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     }
                     catch (e) {
                         data = await response2.text();
                     }
                 }
-                else if (contentType && contentType.includes("text/")) {
+                else if (contentType.includes("text/")) {
                     data = await response.text();
                 }
                 else {
-                    data = await response.blob();
+                    if (cutoffAmount > 0 && contentLength > cutoffAmount && !response.bodyUsed && response.body) {
+                        const reader = response.body.getReader();
+                        const chunks = [];
+                        let receivedLength = 0;
+                        try {
+                            while (true) {
+                                const { done, value } = await reader.read();
+                                if (done) {
+                                    break;
+                                }
+                                chunks.push(value);
+                                receivedLength += value.length;
+                                if (progressCallback) {
+                                    progressCallback(0, 0, receivedLength, contentLength);
+                                }
+                            }
+                            const allChunks = new Uint8Array(receivedLength);
+                            let position = 0;
+                            for (const chunk of chunks) {
+                                allChunks.set(chunk, position);
+                                position += chunk.length;
+                            }
+                            data = allChunks;
+                            console.log(Date.now() + " - blob is streamed: " + receivedLength + "/" + contentLength);
+                        }
+                        finally {
+                            reader.releaseLock();
+                        }
+                    }
+                    else {
+                        data = await response.blob();
+                    }
                 }
                 // Successfully fetched data
                 return data;
             }
             catch (err) {
-                if (maxRetries > 0) {
-                    maxRetries--;
+                if (this.shouldRetryRequest(responseStatus, maxRetries, statusCodesToRetry, countRetries)) {
                     countRetries++;
                     // Wait before retrying
                     await this.delay(retryDelay);
                     // Retry request.
-                    return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay, countRetries);
+                    return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries);
                 }
-                // Can't do more...
-                throw err;
+                else {
+                    // Can't do more...
+                    throw err;
+                }
             }
         }
         /**
@@ -174,8 +225,8 @@ define(['exports'], (function (exports) { 'use strict';
          *   - uniqueId: string
          *   - completedRequestCount: number
          *   - totalRequestCount: number
-         * @returns {Promise<ConcurrentFetchResult>} - A Promise of an array of ConcurrentFetchResult: results and errors:
-         * - ConcurrentFetchResult[]:
+         * @returns {Promise<ConcurrentFetchResponse>} - A Promise of an array of ConcurrentFetchResponse: results and errors:
+         * - ConcurrentFetchResponse[]:
          *  - results: any[];
          *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
          */
@@ -184,7 +235,7 @@ define(['exports'], (function (exports) { 'use strict';
             let completedCount = 0;
             const fetchPromises = this.requests.map((request, index) => {
                 var _a;
-                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, retryDelay = 1000, abortTimeout = 0 } = request;
+                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, cutoffAmount = 0 } = request;
                 const uniqueId = (_a = (requestId)) !== null && _a !== void 0 ? _a : index.toString();
                 const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
                 // Default options (can be overridden)
@@ -194,15 +245,15 @@ define(['exports'], (function (exports) { 'use strict';
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json; charset: UTF-8',
-                        'mode': 'cors'
                     },
                     signal: abortSignal
                 };
+                // 'mode': 'cors'
                 const fetchWithSignal = { ...defaultOptions, ...fetchOptions }; // signal: abortSignal
                 // Must remove 'Content-Type': 'multipart/form-data', since server expects:
                 // Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryyEmKNDsBKjB7QEqu
                 //console.log("Request options =", fetchWithSignal);
-                return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, retryDelay)
+                return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback)
                     .then((data) => {
                     if (callback) {
                         callback(uniqueId, data, null, this.abortManager);
@@ -226,7 +277,7 @@ define(['exports'], (function (exports) { 'use strict';
                     .finally(() => {
                     completedCount++;
                     if (progressCallback)
-                        progressCallback(uniqueId, completedCount, this.requests.length);
+                        progressCallback(uniqueId, completedCount, this.requests.length, 0, 0);
                 });
             });
             try {
@@ -239,6 +290,24 @@ define(['exports'], (function (exports) { 'use strict';
                 this.requests.forEach((request) => { var _a, _b; return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : "unknown", null, err, this.abortManager); });
                 return { results: [], errors: this.errors };
             }
+        }
+        /**
+         *  Check whether or not a retry-condition is met.
+         *  Based on the response.status and the statusCodesToRetry configured.
+         *
+         */
+        shouldRetryRequest(responseStatus, maxRetries, statusCodesToRetry, countRetries) {
+            if ((maxRetries - countRetries) < 1) {
+                return false;
+            }
+            let isInRange = false;
+            for (const [min, max] of statusCodesToRetry) {
+                if (responseStatus >= min && responseStatus <= max) {
+                    isInRange = true;
+                    break;
+                }
+            }
+            return isInRange;
         }
         /**
          * Calls AbortManager.abort()

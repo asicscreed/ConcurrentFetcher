@@ -11,46 +11,54 @@
   </style>
 </head>
 <body>
+<!-- https://ash-speed.hetzner.com/ -->
 <h1>Testing blob responses with the ConcurrentFetcher javascript class</h1>
 <h3>Backend for the requests is <a href='https://dummyjson.com/docs/image#image-identicon'>DummyJSON identicon</a></h3>
 <h4>Demonstrates fetching png images as blob data responses...</h4>
+<p>[<a href="./">BACK TO START</a>]</p>
 <label for='identicon'>Text to identicon:</label>
 <input type='text' name='identicon' id='identicon' value='hello'/>
 <br><label for='noofreq'>No. of requests:</label>
 <input type='number' name='noofreq' id='noofreq' value='1' min='1' max='5'/>
+<br><label for='without'>Without xtra no.:</label>
+<input type='checkbox' name='without' id='without'/>
 <br><div id='container'></div>
 <br><u>ERRORS:</u><br><code id='errorsCode'></code>
 <br><u>PROGRESS:</u><br><code id='progressCode'></code>
 <br>
 <br><button id='btn1' onclick='void();'>getIdenticon</button>
 <script>
+'option strict';
 const container = document.getElementById('container');
 
 const identiconInput = document.getElementById('identicon');
 const noofreqInput = document.getElementById('noofreq');
+const withoutInput = document.getElementById('without');
 
 const progressDiv = document.getElementById('progressCode');
 const errorDiv = document.getElementById('errorsCode');
 
 const getIdenticon = document.getElementById('btn1');
 getIdenticon.onclick = async function getIdenticon() {
-  const noofreq = parseInt(noofreqInput.value);
   const identiconStr = identiconInput.value.trim();
+  let noofreq = parseInt(noofreqInput.value);
+  const without = withoutInput.checked;
   progressDiv.innerHTML = '';
   errorDiv.innerHTML = '';
   while (container.firstChild) { container.removeChild(container.lastChild); }
 
-  const progressCallback = (uniqueId, completed, total) => {
+  const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
     progressDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+': '+completed+'/'+total+'<br>';
   };
 
   //// https://dummyjson.com/icon/HASH/SIZE/?type=png (or svg)
   const reqStr = 'req';
   const requests = [];
-  const hashInit = Math.floor(Math.random() * 55)
+  const hashInit = Math.floor(Math.random() * 55);
+  if (without) { noofreq = 1 };
   for (let ii = 0; ii < noofreq && ii < 5; ii++) {
     const hashNo = 100+hashInit+ii;
-    const hash = (identiconStr === '') ? 'hello'+hashNo : identiconStr+hashNo;
+    const hash = (identiconStr === '') ? 'hello'+hashNo : (without) ? identiconStr : identiconStr+hashNo;
     requests.push({
       url: `https://dummyjson.com/icon/${hash}/150`,
       requestId: reqStr+ii,
@@ -63,26 +71,32 @@ getIdenticon.onclick = async function getIdenticon() {
           img.src = objectURL;
           img.onload = () => {
             try {
+              container.appendChild(img);
               URL.revokeObjectURL(img.src);
             } catch (err) {
               console.log('error in revokeObjectURL: '+err.message);
             }
           }
-          container.appendChild(img);
           progressDiv.innerHTML += Date.now()+' - req.id: '+uniqueId+' identicon size: '+data.size+' - type: '+data.type+'<br>';
         }
       }
     });
   } // for ii
 
-  const startTime = Date.now();
-  progressDiv.innerHTML += startTime+' starting with '+requests.length+' identicons<br>';
-
+  const starttime = Date.now();
+  progressDiv.innerHTML += starttime+' starting with '+requests.length+' identicons<br>';
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  await fetcher.concurrentFetch({ progressCallback });
-
-  const endTime = Date.now();
-  progressDiv.innerHTML += endTime+' finished in '+Math.floor(endTime-startTime)+'ms.<br>';
+  fetcher.concurrentFetch({ progressCallback })
+  .then(function (data) {
+      const errors = data.errors ?? {};
+      const results = data.results ?? {};
+      if (errors.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: errors not empty: "+JSON.stringify(errors)+"<br>";}
+      if (results.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: results not empty: "+JSON.stringify(results)+"<br>";}
+      progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
+  })
+  .catch((e) => {
+      progressDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message;
+  });
 }
 </script>
 </body>

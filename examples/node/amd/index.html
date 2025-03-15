@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <title>AMD</title>
+    <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"/>
+  </head>
+  <body class="container">
+    <h1>GitHub User:</h1>
+    <div class="row">
+      <img id="useravatar" src="" class="col-md-1"/>
+      <div class="col-md-3">
+        <strong id="username"></strong>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.7/require.min.js"></script>
+    <script>
+      requirejs.config({
+        paths: {
+          ConcurrentFetcher: '/concurrentfetcher.amd.min'
+        }
+      });
+      requirejs(['ConcurrentFetcher'], function (ConcurrentFetcher) {
+        const requests = [
+            {
+                url: 'https://api.github.com/users/asicscreed',
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                },
+            }
+        ];
+        const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+        fetcher.concurrentFetch()
+        .then(function (data) {
+            if (data.results.length > 0) {
+                user = data.results[0];
+                document.getElementById('useravatar').src = user.avatar_url;
+                document.getElementById('username').innerHTML = user.login;
+            }
+        })
+        .catch((e) => {
+            document.write("<br>ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message);
+        });
+      });
+    </script>
+  </body>
+</html>

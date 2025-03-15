@@ -5,7 +5,9 @@
 <head>
 <body>
 <button onclick="example2();">example2</button>
+<p>[<a href="./">BACK TO START</a>]</p>
 <script>
+'option strict';
 async function example2() {
   // ./example/browser/example2.html
   const requests = [
@@ -24,7 +26,16 @@ async function example2() {
   ];
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch();
+  fetcher.concurrentFetch()
+  .then(function (data) {
+      const errors = data.errors ?? {};
+      const results = data.results ?? {};
+      if (errors.length > 0 ) {document.write("<br><br>ERROR: errors not empty: "+JSON.stringify(errors)+"<br>");}
+      if (results.length > 0 ) {document.write("<br><br>ERROR: results not empty: "+JSON.stringify(results)+"<br>");}
+  })
+  .catch((e) => {
+      document.write("<br>ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message);
+  });
 }
 </script>
 </body>

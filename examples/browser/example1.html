@@ -5,7 +5,9 @@
 <head>
 <body>
 <button onclick="example1();">example1</button>
+<p>[<a href="./">BACK TO START</a>]</p>
 <script>
+'option strict';
 async function example1() {
   // ./example/browser/example1.html
   const requests = [
@@ -13,16 +15,17 @@ async function example1() {
     { url: "https://jsonplaceholder.typicode.com/comments/1" }
   ];
 
-  let errors = {};
-  let results = {};
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  await fetcher.concurrentFetch()
+  fetcher.concurrentFetch()
   .then((data) => {
-    errors = data.errors ?? {};
-    results = data.results ?? {};
+    const errors = data.errors ?? {};
+    const results = data.results ?? {};
+    if (errors.length > 0) document.write(JSON.stringify(errors));
+    if (results.length > 0) document.write(JSON.stringify(results));
+  })
+  .catch((e) => {
+      document.write("<br>ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message);
   });
-  if (errors.length > 0) document.write(JSON.stringify(errors));
-  if (results.length > 0) document.write(JSON.stringify(results));
 }
 </script>
 </body>
