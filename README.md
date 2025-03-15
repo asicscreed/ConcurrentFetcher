@@ -23,11 +23,10 @@ npm install concurrentfetcher
 Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. For browsers it must be in an <i>async</i> context.
 It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned.
 
-Browser example without callback:
+Browser example without callback (src="concurrentfetcher.iife.min.js"):
 
 **JavaScript**: [Example1](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example1.html)
 ```javascript
-// Running in browser with src="concurrentfetcher.iife.min.js"
 const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
 
 const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
@@ -50,11 +49,10 @@ interface ConcurrentFetchResult {
 ```
 _The errors array is added with the unique Id, the request URL and a custom FetchError which sets error.status as response.status. The result array contains what is in the Response objects_ 
 
-Same currentFetch example, but with callback:
+Same currentFetch example, but with callback (src="concurrentfetcher.iife.min.js"):
 
 **JavaScript**: [Example2](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example2.html)
 ```javascript
-// Running in browser with src="concurrentfetcher.iife.min.js"
 const requests = [
   { url: "https://jsonplaceholder.typicode.com/photos/1",
     callback: (uniqueId, data, error, abortManager) => {
@@ -75,11 +73,10 @@ fetcher.concurrentFetch()
 ...
 ```
 
-Hosted in Node.js:
+Hosted in Node.js with: concurrentfetcher.umd.min.js
 
 **JavaScript**: [Node.js](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/get/index.html)
 ```javascript
-// Running in Node.js with src="concurrentfetcher.umd.min.js"
 const people  = document.getElementById('people');
 const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
 fetcher.concurrentFetch()
@@ -102,11 +99,10 @@ fetcher.concurrentFetch()
 .catch(error => console.error(error));  
 ```
 
-Hosted in require.js:
+Loaded in RequireJS with: concurrentfetcher.amd.min.js
 
-**JavaScript**: [require.js](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/amd/index.html)
+**JavaScript**: [RequireJS](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/amd/index.html)
 ```javascript
-// Running in require.js with src="concurrentfetcher.amd.min.js"
 requirejs.config({ paths: { ConcurrentFetcher: '/concurrentfetcher.amd.min' }});
 requirejs(['ConcurrentFetcher'], function (ConcurrentFetcher) {
   const requests = [
