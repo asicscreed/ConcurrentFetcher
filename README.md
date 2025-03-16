@@ -136,11 +136,12 @@ Support for client-controlled cancellation of a single request and of all reques
 <br><i>Progress tracking:</i> The optional progressCallback enables monitoring the progress of fetch requests.
 <br><i>Retry logic:</i> Retry mechanism for failed requests to improve the resilience of the class.
 <br><i>Large data handling:</i> Utilizes response.body to read large data in chunks. Reports byte transfer information for progress tracking.
+<br><i>Testing:</i> Extensive unit tests to improve the classes reliability.
 
 ### Areas for consideration:
 <i>Advanced progress Tracking:</i> ~~Implement more granular progress tracking~~, such as byte transfer information for more detailed monitoring.
 <br><i>Stream handling:</i> ~~Adding support for handling response streams, which~~ would be beneficial for large data transfers.
-<br><i>Testing:</i> (More) Extensive ~~unit tests and~~ integration tests will greatly improve the classes reliability.
+<br><i>Testing:</i> ~~(More) Extensive unit tests and~~ integration tests will improve the classes reliability further.
 <br><i>Adaptability:</i> Examples to demonstrate how to use the class in various environments (~~browser~~, ~~Node.js~~, frontend frameworks, ~~testing~~).
 
 <footer>
