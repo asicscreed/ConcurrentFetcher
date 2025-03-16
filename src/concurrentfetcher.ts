@@ -22,7 +22,7 @@ export class FetchError extends Error {
 /**
  * JsonParseError class to encapsulate JSON parse errors.
  */
-export class JsonParseError extends Error {
+export class JsonParseError extends SyntaxError {
   url: string | Request;
 
   /**
@@ -90,6 +90,7 @@ export interface RequestItem {
   fetchOptions?: RequestInit;
   callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
   requestId?: string;
+  forceText?: boolean;
   maxRetries?: number;
   statusCodesToRetry?: number[][];
   retryDelay?: number;
@@ -140,6 +141,7 @@ export class ConcurrentFetcher {
    *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
    * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate. 
    *   - Generated if not given. Known as uniqueId throughout the solution.
+   * - (optional) forceText: When true, then response.text is performed instead of response.json. Defaults to false.
    * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
    * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
    *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
@@ -163,7 +165,7 @@ export class ConcurrentFetcher {
   /**
     * Retry logic for each individual fetch request
     */
-  async fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries = 0): Promise<T> {
+  async fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, forceText: boolean, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries = 0): Promise<T> {
     let responseStatus = 200;
     try {
       const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
@@ -197,12 +199,10 @@ export class ConcurrentFetcher {
       let data;
       //const contentType = response.headers.get("content-type");
       if (contentType.includes("application/json")) {
-          const response2 = response.clone();
-          try {
+          if (forceText) {
+              data = JSON.stringify(await response.json());
+          } else {
               data = await response.json();
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (e) {
-              data = await response2.text();
           }
       } else if (contentType.includes("text/")) {
           data = await response.text();
@@ -217,9 +217,7 @@ export class ConcurrentFetcher {
                       if (done) { break; }
                       chunks.push(value);
                       receivedLength += value.length;
-                      if (progressCallback) {
-                          progressCallback(0, 0, receivedLength, contentLength);
-                      }
+                      if (progressCallback) { progressCallback(0, 0, receivedLength, contentLength); }
                   }
                   const allChunks = new Uint8Array(receivedLength);
                   let position = 0;
@@ -227,8 +225,8 @@ export class ConcurrentFetcher {
                       allChunks.set(chunk, position);
                       position += chunk.length;
                   }
+                  //console.log(Date.now() + " - blob is streamed: " + receivedLength + "/" + contentLength);
                   data = allChunks;
-                  console.log(Date.now() + " - blob is streamed: " + receivedLength + "/" + contentLength);
               }
               finally {
                   reader.releaseLock();
@@ -237,15 +235,15 @@ export class ConcurrentFetcher {
               data = await response.blob();
           }
       }
-      // Successfully fetched data
       return data;
+      //throw new FetchError('Should never happen', url, 0);
     } catch (err) {
        if (this.shouldRetryRequest(responseStatus, maxRetries, statusCodesToRetry, countRetries)) {
         countRetries++;
         // Wait before retrying
         await this.delay(retryDelay);
         // Retry request.
-        return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries);
+        return this.fetchWithRetry(url, fetchWithSignal, uniqueId, forceText, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries);
       } else {
         // Can't do more...
         throw err;
@@ -270,7 +268,7 @@ export class ConcurrentFetcher {
     let completedCount = 0;
 
     const fetchPromises = this.requests.map((request, index) => {
-      const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100-199],[429-429],[500-599]], retryDelay = 1000, abortTimeout = 0, cutoffAmount = 0 } = request;
+      const { url, fetchOptions = {}, callback = null, requestId = null, forceText = false, maxRetries = 0, statusCodesToRetry = [[100-199],[429-429],[500-599]], retryDelay = 1000, abortTimeout = 0, cutoffAmount = 0 } = request;
       const uniqueId = (requestId) ?? index.toString();
       const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
 
@@ -293,7 +291,7 @@ export class ConcurrentFetcher {
 
       //console.log("Request options =", fetchWithSignal);
 
-      return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback)
+      return this.fetchWithRetry(url, fetchWithSignal, uniqueId, forceText, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback)
       .then((data) => {
           if (callback) {
             callback(uniqueId, data, null, this.abortManager);
@@ -302,8 +300,10 @@ export class ConcurrentFetcher {
           }
         })
       .catch((err: Error) => {
-          if (err instanceof SyntaxError) {
+          if ((err instanceof SyntaxError) || (err.name && err.name === "SyntaxError")) {
             err = new JsonParseError(err.message, url);
+          //} else if ((err instanceof TypeError) || (err.name && err.name === "TypeError")) {
+          //  err = new FetchError('Fetch Network error! error: '+err.message, url, 500);
           }
           if (callback) {
             callback(uniqueId, null, err, this.abortManager);
@@ -314,7 +314,7 @@ export class ConcurrentFetcher {
         })
       .finally(() => {
           completedCount++;
-          if (progressCallback) progressCallback(uniqueId, completedCount, this.requests.length, 0, 0);
+          if (progressCallback) { progressCallback(uniqueId, completedCount, this.requests.length, 0, 0); }
       });
     });
 

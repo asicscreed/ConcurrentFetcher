@@ -14,7 +14,7 @@ export declare class FetchError extends Error {
 /**
  * JsonParseError class to encapsulate JSON parse errors.
  */
-export declare class JsonParseError extends Error {
+export declare class JsonParseError extends SyntaxError {
     url: string | Request;
     /**
      * @param {string} message - The JSON parse error message
@@ -56,6 +56,7 @@ export interface RequestItem {
     fetchOptions?: RequestInit;
     callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
     requestId?: string;
+    forceText?: boolean;
     maxRetries?: number;
     statusCodesToRetry?: number[][];
     retryDelay?: number;
@@ -100,6 +101,7 @@ export declare class ConcurrentFetcher {
      *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
      * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
      *   - Generated if not given. Known as uniqueId throughout the solution.
+     * - (optional) forceText: When true, then response.text is performed instead of response.json. Defaults to false.
      * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
      * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
      *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
@@ -115,7 +117,7 @@ export declare class ConcurrentFetcher {
     /**
       * Retry logic for each individual fetch request
       */
-    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries?: number): Promise<T>;
+    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, forceText: boolean, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching.
      * @param {callback} progressCallback - (optional):
