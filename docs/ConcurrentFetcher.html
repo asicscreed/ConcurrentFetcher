@@ -129,7 +129,6 @@
 <li>Generated if not given. Known as uniqueId throughout the solution.</li>
 </ul>
 </li>
-<li>(optional) forceText: When true, then response.text is performed instead of response.json. Defaults to false.</li>
 <li>(optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.</li>
 <li>(optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
 <ul>
@@ -138,7 +137,14 @@
 </li>
 <li>(optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.</li>
 <li>(optional) abortTimeout: automatically abort the request after this specified time (in ms).</li>
-<li>(optional) cutoffAmount: when response content is bigger than cutoffAmount, then reading will be buffered. If 0 (zero) then reading will not be buffered.</li>
+<li>(optional) forceReader: Reads response.body instead of either text, json or blob data. Defaults to false. See also cutoffAmount.</li>
+<li>(optional) cutoffAmount: when response content is bigger than cutoffAmount (in KB!) - then response.body will be read in chunks. AND The result will be a blob object (even when reading text and json!). Defaults to 0 (zero) - meaning: no special treatment.
+<ul>
+<li>blob data will be read in chunks if either forceReader (is true) or cutoffAmount (is reached).</li>
+<li>text/json data will be read in chunks if forceReader (is true) and returned as a string.</li>
+<li>text/json data will be read in chunks if cutoffAmount (is reached) and returned as blob data.</li>
+</ul>
+</li>
 </ul></td>
         </tr>
 
@@ -252,6 +258,94 @@
     
 
     
+    <h4 class="name" id="CommonError"><span class="type-signature"></span>CommonError<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Returns a new Error with a common error message.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line437">line 437</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="abort"><span class="type-signature"></span>abort<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
@@ -305,7 +399,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line317">line 317</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line424">line 424</a>
     </li></ul></dd>
     
 
@@ -394,7 +488,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line324">line 324</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line431">line 431</a>
     </li></ul></dd>
     
 
@@ -540,7 +634,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line230">line 230</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line248">line 248</a>
     </li></ul></dd>
     
 
@@ -655,7 +749,183 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line116">line 116</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line144">line 144</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="fetchBlobStream"><span class="type-signature">(async) </span>fetchBlobStream<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Reads blob-data in chunks.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line352">line 352</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="fetchTextStream"><span class="type-signature">(async) </span>fetchTextStream<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Reads text-/json-data in chunks.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line316">line 316</a>
     </li></ul></dd>
     
 
@@ -743,7 +1013,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line122">line 122</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line150">line 150</a>
     </li></ul></dd>
     
 
@@ -832,7 +1102,7 @@ Based on the response.status and the statusCodesToRetry configured.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line299">line 299</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line406">line 406</a>
     </li></ul></dd>
     
 
@@ -884,7 +1154,7 @@ Based on the response.status and the statusCodesToRetry configured.</p>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sun Mar 16 2025 16:08:27 GMT+0100 (Central European Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Mar 18 2025 23:31:59 GMT+0100 (Central European Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

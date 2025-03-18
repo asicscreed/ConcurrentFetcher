@@ -51,16 +51,18 @@ export declare class AbortManager {
      */
     abortAll(): void;
 }
+export type myCallback = (uniqueId: string, data: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+error: Error | null, abortManager: AbortManager) => void;
 export interface RequestItem {
     url: string | Request;
     fetchOptions?: RequestInit;
-    callback?: (uniqueId: string, data: any, error: Error | null, abortManager: AbortManager) => void;
+    callback?: myCallback;
     requestId?: string;
-    forceText?: boolean;
     maxRetries?: number;
     statusCodesToRetry?: number[][];
     retryDelay?: number;
     abortTimeout?: number;
+    forceReader?: boolean;
     cutoffAmount?: number;
 }
 export interface ConcurrentFetchResponse {
@@ -71,8 +73,9 @@ export interface ConcurrentFetchResponse {
         error: Error;
     }[];
 }
+export type myprogressCallback = (uniqueId: string, completedRequestCount: number, totalRequestCount: number, completedByteCount: number, totalByteCount: number) => void;
 export interface ConcurrentFetchOptions {
-    progressCallback?: (uniqueId: string, completedRequestCount: number, totalRequestCount: number, completedByteCount: number, totalByteCount: number) => void;
+    progressCallback?: myprogressCallback;
 }
 /**
  * ConcurrentFetcher class, which manages concurrent fetch requests and cancellation.
@@ -87,6 +90,7 @@ export declare class ConcurrentFetcher {
     private requests;
     private errors;
     private abortManager;
+    private commonErrors;
     /**
      * @param {array} requests - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
@@ -101,13 +105,16 @@ export declare class ConcurrentFetcher {
      *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
      * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
      *   - Generated if not given. Known as uniqueId throughout the solution.
-     * - (optional) forceText: When true, then response.text is performed instead of response.json. Defaults to false.
      * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
      * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
      *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
      * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
      * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
-     * - (optional) cutoffAmount: when response content is bigger than cutoffAmount, then reading will be buffered. If 0 (zero) then reading will not be buffered.
+     * - (optional) forceReader: Reads response.body instead of either text, json or blob data. Defaults to false. See also cutoffAmount.
+     * - (optional) cutoffAmount: when response content is bigger than cutoffAmount (in KB!) - then response.body will be read in chunks. AND The result will be a blob object (even when reading text and json!). Defaults to 0 (zero) - meaning: no special treatment.
+     *   - blob data will be read in chunks if either forceReader (is true) or cutoffAmount (is reached).
+     *   - text/json data will be read in chunks if forceReader (is true) and returned as a string.
+     *   - text/json data will be read in chunks if cutoffAmount (is reached) and returned as blob data.
      */
     constructor(requests: RequestItem[]);
     /**
@@ -117,7 +124,7 @@ export declare class ConcurrentFetcher {
     /**
       * Retry logic for each individual fetch request
       */
-    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, forceText: boolean, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, cutoffAmount: number, progressCallback: any, countRetries?: number): Promise<T>;
+    fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, forceReader: boolean, cutoffAmount: number, progressCallback: myprogressCallback | undefined, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching.
      * @param {callback} progressCallback - (optional):
@@ -131,6 +138,16 @@ export declare class ConcurrentFetcher {
      *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
     concurrentFetch({ progressCallback }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResponse>;
+    /**
+     *  Reads text-/json-data in chunks.
+     *
+     */
+    fetchTextStream(fetchResponse: Response, fetchType: string, uniqueId: string, contentType: string, contentLength: number, progressCallback: myprogressCallback | undefined): Promise<string>;
+    /**
+     *  Reads blob-data in chunks.
+     *
+     */
+    fetchBlobStream(fetchResponse: Response, uniqueId: string, contentType: string, contentLength: number, progressCallback: myprogressCallback | undefined): Promise<Blob>;
     /**
      *  Check whether or not a retry-condition is met.
      *  Based on the response.status and the statusCodesToRetry configured.
@@ -148,4 +165,8 @@ export declare class ConcurrentFetcher {
      * see {@link AbortManager}
      */
     abortAll(): void;
+    /**
+     * Returns a new Error with a common error message.
+     */
+    CommonError(errorType: string, message: string): Error;
 }

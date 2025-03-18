@@ -303,6 +303,47 @@ describe('ConcurrentFetcher class', () => {
     expect(error.status).toBe(null);
   });
 
+  it('JsonParseError - create a instance with correct properties', () => {
+    const message = 'Network request failed';
+    const url = 'https://example.com/api/data';
+
+    const error = new ConcurrentFetcher.JsonParseError(message, url);
+
+    expect(error).toBeInstanceOf(ConcurrentFetcher.JsonParseError);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe('JsonParseError');
+    expect(error.message).toBe(message);
+    expect(error.url).toBe(url);
+  });
+
+  it('JsonParseError - create a instance with default super constructor properties', () => {
+    const message = 'Something went wrong';
+    const url = 'https://example.com/api/test';
+
+    const error = new ConcurrentFetcher.JsonParseError(message, url);
+
+    expect(error.stack).toBeDefined(); // Check if stack trace is present, inherited from Error
+  });
+
+  it('JsonParseError - handle different data types for status and url', () => {
+    const message = 'Invalid data';
+    const url = 123;
+
+    const error = new ConcurrentFetcher.JsonParseError(message, url);
+
+    expect(error.url).toBe(123);
+  });
+
+  it('JsonParseError - handle undefined parameters', () => {
+    const error = new ConcurrentFetcher.JsonParseError();
+    expect(error.url).toBe(undefined);
+  });
+
+  it('JsonParseError - handle null parameters', () => {
+    const error = new ConcurrentFetcher.JsonParseError(null,null,null);
+    expect(error.url).toBe(null);
+  });
+
   it('Error - throw Error', () => {
    let myError = new Error('some message');
    myError.data = { name: 'myError',

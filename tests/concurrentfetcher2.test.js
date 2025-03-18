@@ -127,23 +127,51 @@ describe('ConcurrentFetcher', () => {
 
       const result = await fetcher.concurrentFetch();
 
-      expect(result.results).toEqual(['{"data":"result1"}']);
+      expect(result.results.length).toEqual(1);
+      if (result.results.length > 0) {
+        expect(result.results[0]).toEqual({ data: 'result1' });
+      }
     });
 
     it('ConcurrentFetcher - handle cutoff amount', async () => {
-        const requests = [{ url: 'https://example.com/api/1', cutoffAmount: 1000 }];
+        const requests = [{ url: 'https://example.com/api/1', cutoffAmount: 1 }];
         fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
 
-        const byteArrayLength = 10000;
-        const byteArray = new Uint8Array(byteArrayLength);
-        for (let i = 0; i < byteArrayLength; i++) { byteArray[i] = Math.floor(Math.random()*255); }
+        const byteArrayLength = 16;
+        const byteArrayBytes = 65536; // 16*65536==4*262144==1024*1024
+        const byteArray = [byteArrayLength];
+        for (let i = 0; i < byteArrayLength; i++) {
+            byteArray[i] = new Uint8Array(byteArrayBytes);
+            for (let j = 0; j < byteArrayBytes; j++) {
+                byteArray[i][j] = Math.floor(Math.random()*255);
+            }
+        }
+        //console.log("byteArray length", byteArray.length);
 
         const mockReader = {
             read: jest.fn()
-                .mockResolvedValueOnce({ done: false, value: byteArray })
+                .mockResolvedValueOnce({ done: false, value: byteArray[0] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[1] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[2] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[3] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[4] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[5] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[6] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[7] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[8] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[9] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[10] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[11] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[12] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[13] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[14] })
+                .mockResolvedValueOnce({ done: false, value: byteArray[15] })
                 .mockResolvedValueOnce({ done: true }),
             releaseLock: jest.fn(),
         };
+
+        totalByteLength = 0;
+        for (let i = 0; i < byteArrayLength; i++) { totalByteLength += byteArray[i].length; }
 
         const mockBody = {
             getReader: jest.fn().mockReturnValue(mockReader),
@@ -152,12 +180,59 @@ describe('ConcurrentFetcher', () => {
         mockFetch.mockResolvedValueOnce({
             ok: true,
             body: mockBody,
-            headers: new Map([["content-length", byteArray.length]]),
+            headers: new Map([["content-length", totalByteLength]]),
         });
 
-        await fetcher.concurrentFetch();
+        const result = await fetcher.concurrentFetch();
 
         expect(mockReader.read).toHaveBeenCalled();
         expect(mockReader.releaseLock).toHaveBeenCalled();
+        expect(result.results.length).toEqual(1);
+        if (result.results.length > 0) {
+            const blob = result.results[0];
+            expect(blob.size).toEqual(totalByteLength);
+        }
+    });
+
+    it('ConcurrentFetcher - handle erroneous constructor parameters', async () => {
+      let requests = [];
+      try {
+          fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+      } catch (error) {
+          expect(error.message).toEqual('Argument empty: requests');
+      }
+
+      requests = [{}];
+      try {
+          fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+      } catch (error) {
+          expect(error.message).toEqual('Argument empty: requests');
+      }
+
+      requests = {url: 'https://example.com/api/1'};
+      try {
+          fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+      } catch (error) {
+          expect(error.message).toEqual('Argument is invalid: requests');
+      }
+
+      requests = [
+            {url: 'https://example.com/api/0', requestId: 'req10'},
+            {url: 'https://example.com/api/1', requestId: 'req11'},
+            {url: 'https://example.com/api/2', requestId: 'req12'},
+            {url: 'https://example.com/api/3', requestId: 'req13'},
+            {url: 'https://example.com/api/4', requestId: 'req14'},
+            {url: 'https://example.com/api/5', requestId: 'req15'},
+            {url: 'https://example.com/api/6', requestId: 'req16'},
+            {url: 'https://example.com/api/6', requestId: 'req16'},
+            {url: 'https://example.com/api/7', requestId: 'req17'},
+            {url: 'https://example.com/api/8', requestId: 'req18'},
+            {url: 'https://example.com/api/9', requestId: 'req19'}
+      ];
+      try {
+          fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+      } catch (error) {
+          expect(error.message).toEqual('Duplicate key: requestId = req16');
+      }
     });
 });

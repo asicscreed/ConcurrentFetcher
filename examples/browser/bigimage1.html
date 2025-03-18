@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ConcurrentFetcher test</title>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.js"></script>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    form {
+      text-align: center;
+      width: 80%;
+      margin-left: 10%;
+      display: inline-block;
+    }
+    img {
+        max-width: 100%;
+        max-height: 100%;
+    }
+    label {
+        font-size: larger;
+        position: relative;
+        text-align: center;
+        width: 20%;
+    }
+    #myProgress {
+      width: 100%;
+      background-color: #DDDDDD;
+    }
+    #myBar {
+      width: 1%;
+      height: 30px;
+      background-color: #04AA6D;
+    }
+    .inp {
+        width: 100%;
+    }
+    .log {
+        position: relative;
+        left: 5%;
+        text-align: left;
+    }
+    .landscape {
+        width: 100%;
+        height: auto;
+    }
+  </style>
+<head>
+<body>
+<h1>Test of various settings of the ConcurrentFetcher javascript class</h1>
+<p>Explanation:</p>
+<br><br>
+<div id="myProgress">
+    <div id="myBar"></div>
+</div>
+<br>
+<form id="myForm">
+  <label for="bigimageblob">Enter url for a large image: </label><br>
+  <input class="inp" type="url" id="bigimageblob" name="bigimageblob" placeholder="E.g. at unsplash or imgur"><br>
+  <input class="inp" type="submit" value="Get image!"><br>
+  <label for="checkFetch">Plain fetch: </label>
+  <input type="checkbox" id="checkFetch" name="checkFetch">
+</form>
+<br><p class="log" id="myLog"></p>
+<br><br><div id="container" class="landscape"></div>
+<script>
+'option strict';
+
+function isValidHttpUrl(urlString) {
+  if (!urlString) return false;
+  let url;
+  try {
+    url = new URL(urlString);
+  } catch (_) {
+    return false;  
+  }
+  return url.protocol === 'http:' || url.protocol === 'https:';
+}
+
+async function processFetchResponse(fetchResponse, progressCallback) {
+  if (!fetchResponse.body) {
+    throw new Error('Response body is empty.');
+  }
+
+  const reader = fetchResponse.body.getReader();
+  const chunks = [];
+  let receivedLength = 0;
+  const contentLength = parseInt(fetchResponse.headers.get('Content-Length')) || undefined;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) { break; }
+      chunks.push(value);
+      receivedLength += value.length;
+      if (progressCallback) { progressCallback(receivedLength, contentLength); }
+    }
+    const allChunks = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      allChunks.set(chunk, position);
+      position += chunk.length;
+    }
+    const newResponse = new Response(allChunks, {
+      status: fetchResponse.status,
+      statusText: fetchResponse.statusText,
+      headers: fetchResponse.headers,
+    });
+    return newResponse;
+  } catch(err) {
+    throw err;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+async function plainFetchImage(bigimageblobStr) {
+  let starttime = Date.now();
+  try {
+    myLog.innerHTML = '';
+    progressBar.style.width = '1%';
+    myLog.innerHTML += Date.now()+' - Getting image:'+bigimageblobStr+'<br>';
+    const response = await fetch(bigimageblobStr);
+    //myLog.innerHTML += Date.now()+' - response.url ='+ response.url+'<br>';
+    //myLog.innerHTML += Date.now()+' - response.type ='+ response.type+'<br>';
+    //myLog.innerHTML += Date.now()+' - response.status ='+ response.status+'<br>';
+    //if (response.headers) {
+    //    response.headers.forEach((value, key) => {
+    //        myLog.innerHTML += Date.now()+` - response.header = ${key} ==> ${value}<br>`;
+    //    });
+    //}
+    let totalBytes = 0;
+    let firstTimeAround = true;
+    const processedResponse = await processFetchResponse(response, (received, total) => {
+      if (total !== undefined) {
+        totalBytes = total;
+        const percentage = (received / total) * 100;
+        progressBar.style.width = percentage+'%';
+        if (firstTimeAround) {
+          myLog.innerHTML += Date.now()+' - Progress: '+percentage.toFixed(2)+'%';
+        } else {
+          myLog.innerHTML += ' '+percentage.toFixed(2)+'%';
+        }
+      } else {
+        if (firstTimeAround) {
+          myLog.innerHTML += Date.now()+' - Received: '+received;
+        } else {
+          myLog.innerHTML += ' '+received;
+        }
+      }
+      firstTimeAround = false;
+    });
+    myLog.innerHTML += '<br>'+Date.now()+' - Got blob. Took '+(Date.now()-starttime)+'ms. - now loading image...<br>';
+    starttime = Date.now();
+
+    // Process the new response
+    const blob = await processedResponse.blob();
+    const img = document.createElement('img');
+    img.style.display='block';
+    img.src = URL.createObjectURL(blob);
+    img
+    .decode()
+    .then(() => {
+      container.appendChild(img);
+      URL.revokeObjectURL(img.src);
+      if (totalBytes > 0) {
+        myLog.innerHTML += Date.now()+' - Done! Size: '+totalBytes.toLocaleString()+' Took: '+(Date.now()-starttime)+'ms.<br>';
+      } else {
+        myLog.innerHTML += Date.now()+' - Done! Took: '+(Date.now()-starttime)+'ms.<br>';
+      }
+    })
+    .catch((encodingError) => {
+      console.log('encodingError: ', encodingError);
+      myLog.innerHTML += Date.now()+' - encodingError: '+encodingError+'<br>';
+    });
+  } catch (error) {
+    console.log('Error:', error);
+    myLog.innerHTML += Date.now()+' - Fatal Error: '+error+'<br>';
+  }
+  return true;
+}
+
+async function concurrentFetchImage(bigimageblobStr) {
+  let starttime = Date.now();
+  try {
+    myLog.innerHTML = '';
+    progressBar.style.width = '1%';
+    myLog.innerHTML += Date.now()+' - Getting image:'+bigimageblobStr+'<br>';
+
+    let totalBytes = 0;
+    let firstTimeAround = true;
+    const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
+      if (byteTotal > 0) {
+        totalBytes = byteTotal;
+        const percentage = (byteComplete / byteTotal) * 100;
+        progressBar.style.width = percentage+'%';
+        if (firstTimeAround) {
+          myLog.innerHTML += Date.now()+' - Progress: '+percentage.toFixed(2)+'%';
+        } else {
+          myLog.innerHTML += ' '+percentage.toFixed(2)+'%';
+        }
+      } else if (byteComplete > 0) {
+        if (firstTimeAround) {
+          myLog.innerHTML += Date.now()+' - Received: '+byteComplete;
+        } else {
+          myLog.innerHTML += ' '+byteComplete;
+        }
+      } else if (total > 0) {
+          myLog.innerHTML += '<br>'+Date.now()+' - Progress finished: ('+uniqueId+'/'+completed+'/'+total+')';
+      } else {
+          myLog.innerHTML += '<br>'+Date.now()+' - Weird!Progress: ('+uniqueId+'/'+completed+'/'+total+'/'+byteComplete+'/'+byteTotal+')';
+      }
+      firstTimeAround = false;
+    };
+
+    const requests = [];
+    requests.push( { url: bigimageblobStr, cutoffAmount: 1024 } );
+    const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+    fetcher.concurrentFetch({ progressCallback })
+    .then((data) => {
+      const errors = data.errors ?? {};
+      const results = data.results ?? {};
+      if (errors.length > 0) {
+          console.log(errors);
+          myLog.innerHTML += '<br>'+Date.now()+' - Fetch received errors: '+errors+'<br>';
+      }
+      if (results.length > 0) {
+        myLog.innerHTML += '<br>'+Date.now()+' - Got blob. Took '+(Date.now()-starttime)+'ms. - now loading image...<br>';
+        const blob = results[0];
+        const img = document.createElement('img');
+        img.style.display='block';
+        img.src = URL.createObjectURL(blob);
+        img
+        .decode()
+        .then(() => {
+          container.appendChild(img);
+          URL.revokeObjectURL(img.src);
+          if (totalBytes > 0) {
+            myLog.innerHTML += Date.now()+' - Done! Size: '+totalBytes.toLocaleString()+' Took: '+(Date.now()-starttime)+'ms.<br>';
+          } else {
+            myLog.innerHTML += Date.now()+' - Done! Took: '+(Date.now()-starttime)+'ms.<br>';
+          }
+        })
+        .catch((encodingError) => {
+            console.log("encodingError: ", encodingError);
+            myLog.innerHTML += Date.now()+' - encodingError: '+encodingError+'<br>';
+        });
+      }
+    })
+    .catch((fetcError) => {
+      myLog.innerHTML += Date.now()+' - Fetch errors: '+fetcError+'<br>';
+    });
+  } catch (error) {
+    console.log('Error:', error);
+    myLog.innerHTML += Date.now()+' - Fatal Error: '+error+'<br>';
+  }
+  return true;
+}
+
+async function fetchImage(event) {
+  event.preventDefault();
+  //const eventtimeStamp = event.timeStamp;
+  const bigimageblobStr = bigimageblobInput.value.trim();
+  //if (!isValidHttpUrl(bigimageblobStr)) {
+  //    myLog.innerHTML += Date.now()+' - Not a valid url:'+bigimageblobStr+'<br>';
+  //    return false;
+  //}
+  const imgLen = (document.images) ? document.images.length : 0;
+  for (let i = imgLen; i-- > 0;) {
+    document.images[i].parentNode.removeChild(document.images[i]);
+  }
+  if (fetchChecked.checked) {
+    plainFetchImage(bigimageblobStr);
+  } else {
+    concurrentFetchImage(bigimageblobStr);
+  }
+}
+
+const container = document.getElementById('container');
+const progressBar = document.getElementById('myBar');
+const bigimageblobInput = document.getElementById('bigimageblob');
+const fetchChecked =  document.getElementById('checkFetch');
+
+const myForm = document.getElementById('myForm');
+const myLog = document.getElementById('myLog');
+
+myForm.addEventListener('submit', fetchImage);
+</script>
+</body>
+</html>

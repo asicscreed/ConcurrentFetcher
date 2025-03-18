@@ -102,15 +102,43 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                  *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
                  * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
                  *   - Generated if not given. Known as uniqueId throughout the solution.
-                 * - (optional) forceText: When true, then response.text is performed instead of response.json. Defaults to false.
                  * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
                  * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
                  *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
                  * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
                  * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
-                 * - (optional) cutoffAmount: when response content is bigger than cutoffAmount, then reading will be buffered. If 0 (zero) then reading will not be buffered.
+                 * - (optional) forceReader: Reads response.body instead of either text, json or blob data. Defaults to false. See also cutoffAmount.
+                 * - (optional) cutoffAmount: when response content is bigger than cutoffAmount (in KB!) - then response.body will be read in chunks. AND The result will be a blob object (even when reading text and json!). Defaults to 0 (zero) - meaning: no special treatment.
+                 *   - blob data will be read in chunks if either forceReader (is true) or cutoffAmount (is reached).
+                 *   - text/json data will be read in chunks if forceReader (is true) and returned as a string.
+                 *   - text/json data will be read in chunks if cutoffAmount (is reached) and returned as blob data.
                  */
                 constructor(requests) {
+                    this.commonErrors = {
+                        invalidOperation: 'Invalid operation',
+                        unAuthorized: 'You are not authorized to use this function'
+                    };
+                    if (!Array.isArray(requests)) {
+                        throw this.CommonError("InvalidArgument", "requests");
+                    }
+                    const reqLen = requests.length;
+                    if (reqLen < 1) {
+                        throw this.CommonError("ArgumentEmpty", "requests");
+                    }
+                    const reqArray = [];
+                    for (let i = 0; i < reqLen; i++) {
+                        reqArray.push(i);
+                    }
+                    for (let i = 0; i < reqLen; i++) {
+                        if (requests[i].requestId) {
+                            if (reqArray.includes(requests[i].requestId)) {
+                                throw this.CommonError("DuplicateKey", 'requestId = ' + requests[i].requestId);
+                            }
+                            else {
+                                reqArray.push(requests[i].requestId);
+                            }
+                        }
+                    }
                     this.requests = requests;
                     this.errors = [];
                     this.abortManager = new AbortManager();
@@ -124,19 +152,11 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                 /**
                   * Retry logic for each individual fetch request
                   */
-                async fetchWithRetry(url, fetchWithSignal, uniqueId, forceText, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries = 0) {
+                async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback, countRetries = 0) {
                     let responseStatus = 200;
                     try {
                         const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
                         const response = await fetch(_url, fetchWithSignal);
-                        //console.log("response.url =", response.url);
-                        //console.log("response.type =", response.type);
-                        //console.log("response.status =", response.status);
-                        //if (response.headers) {
-                        //    response.headers.forEach((value, key) => {
-                        //        console.log("response.header =", `${key} ==> ${value}`);
-                        //    });
-                        //}
                         ////console.log("response.statusText =", response.statusText);
                         ////console.log("response.userFinalURL =", response.useFinalURL);
                         responseStatus = response.status;
@@ -156,54 +176,52 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                                 }
                             });
                         }
-                        let data;
-                        //const contentType = response.headers.get("content-type");
-                        if (contentType.includes("application/json")) {
-                            if (forceText) {
-                                data = JSON.stringify(await response.json());
+                        let forceResponseReader = false;
+                        if (forceReader && !response.bodyUsed && response.body) {
+                            forceResponseReader = true;
+                        }
+                        let returnData;
+                        if (contentType.match(/application\/[^+]*[+]?(json);?.*/i)) {
+                            if (forceResponseReader) {
+                                if (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body) {
+                                    returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                    //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                    //data = await resp.blob();
+                                }
+                                else {
+                                    returnData = await this.fetchTextStream(response, 'json', uniqueId, contentType, contentLength, progressCallback);
+                                }
                             }
                             else {
-                                data = await response.json();
+                                returnData = await response.json();
                             }
                         }
                         else if (contentType.includes("text/")) {
-                            data = await response.text();
-                        }
-                        else {
-                            if (cutoffAmount > 0 && contentLength > cutoffAmount && !response.bodyUsed && response.body) {
-                                const reader = response.body.getReader();
-                                const chunks = [];
-                                let receivedLength = 0;
-                                try {
-                                    while (true) {
-                                        const { done, value } = await reader.read();
-                                        if (done) {
-                                            break;
-                                        }
-                                        chunks.push(value);
-                                        receivedLength += value.length;
-                                        if (progressCallback) {
-                                            progressCallback(0, 0, receivedLength, contentLength);
-                                        }
-                                    }
-                                    const allChunks = new Uint8Array(receivedLength);
-                                    let position = 0;
-                                    for (const chunk of chunks) {
-                                        allChunks.set(chunk, position);
-                                        position += chunk.length;
-                                    }
-                                    //console.log(Date.now() + " - blob is streamed: " + receivedLength + "/" + contentLength);
-                                    data = allChunks;
+                            if (forceResponseReader) {
+                                if (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body) {
+                                    returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                    //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                    //data = await resp.blob();
                                 }
-                                finally {
-                                    reader.releaseLock();
+                                else {
+                                    returnData = await this.fetchTextStream(response, 'text', uniqueId, contentType, contentLength, progressCallback);
                                 }
                             }
                             else {
-                                data = await response.blob();
+                                returnData = await response.text();
                             }
                         }
-                        return data;
+                        else { // blob!
+                            if (forceResponseReader || (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body)) {
+                                returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
+                                //data = await resp.blob();
+                            }
+                            else {
+                                returnData = await response.blob();
+                            }
+                        }
+                        return returnData;
                         //throw new FetchError('Should never happen', url, 0);
                     }
                     catch (err) {
@@ -212,7 +230,7 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                             // Wait before retrying
                             await this.delay(retryDelay);
                             // Retry request.
-                            return this.fetchWithRetry(url, fetchWithSignal, uniqueId, forceText, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback, countRetries);
+                            return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback, countRetries);
                         }
                         else {
                             // Can't do more...
@@ -233,11 +251,12 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                  *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
                  */
                 async concurrentFetch({ progressCallback } = {}) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const results = [];
                     let completedCount = 0;
                     const fetchPromises = this.requests.map((request, index) => {
                         var _a;
-                        const { url, fetchOptions = {}, callback = null, requestId = null, forceText = false, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, cutoffAmount = 0 } = request;
+                        const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, forceReader = false, cutoffAmount = 0 } = request;
                         const uniqueId = (_a = (requestId)) !== null && _a !== void 0 ? _a : index.toString();
                         const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
                         // Default options (can be overridden)
@@ -250,12 +269,10 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                             },
                             signal: abortSignal
                         };
-                        // 'mode': 'cors'
                         const fetchWithSignal = { ...defaultOptions, ...fetchOptions }; // signal: abortSignal
                         // Must remove 'Content-Type': 'multipart/form-data', since server expects:
                         // Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryyEmKNDsBKjB7QEqu
-                        //console.log("Request options =", fetchWithSignal);
-                        return this.fetchWithRetry(url, fetchWithSignal, uniqueId, forceText, maxRetries, statusCodesToRetry, retryDelay, cutoffAmount, progressCallback)
+                        return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback)
                             .then((data) => {
                             if (callback) {
                                 callback(uniqueId, data, null, this.abortManager);
@@ -289,11 +306,101 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                         await Promise.all(fetchPromises);
                         const filteredResults = results ? results.filter((result) => result !== null) : [];
                         return { results: filteredResults, errors: this.errors };
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     }
                     catch (err) {
                         this.errors.push({ uniqueId: "unknown", url: "unknown", error: err });
                         this.requests.forEach((request) => { var _a, _b; return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : "unknown", null, err, this.abortManager); });
                         return { results: [], errors: this.errors };
+                    }
+                }
+                /**
+                 *  Reads text-/json-data in chunks.
+                 *
+                 */
+                async fetchTextStream(fetchResponse, fetchType, uniqueId, contentType, contentLength, progressCallback) {
+                    if (!fetchResponse.body) {
+                        throw new Error('Response body is empty.');
+                    }
+                    const reader = fetchResponse.body.getReader();
+                    let done, value;
+                    let textChunks = '';
+                    const decoder = new TextDecoder("utf-8");
+                    while ({ done, value } = await reader.read(), !done) {
+                        textChunks += decoder.decode(value, { stream: true });
+                        if (progressCallback) {
+                            progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+                        }
+                    }
+                    // empty buffer...
+                    textChunks += decoder.decode();
+                    if (progressCallback) {
+                        progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+                    }
+                    if (fetchType == 'json') {
+                        try {
+                            return JSON.parse(textChunks);
+                        }
+                        catch (err) {
+                            // If not JsonParseError re-throw, otherwise return textChunks...
+                            if (!(err instanceof SyntaxError)) {
+                                throw err;
+                            }
+                        }
+                    }
+                    return textChunks;
+                }
+                /**
+                 *  Reads blob-data in chunks.
+                 *
+                 */
+                async fetchBlobStream(fetchResponse, uniqueId, contentType, contentLength, progressCallback) {
+                    if (!fetchResponse.body) {
+                        throw new Error('Response body is empty.');
+                    }
+                    //console.log("fetchBlobStream =", `${contentType} ==> ${contentLength}`);
+                    const reader = fetchResponse.body.getReader();
+                    const chunks = [];
+                    let receivedLength = 0;
+                    try {
+                        //const allChunks = new Uint8Array(contentLength);
+                        //let receivedLength = 0;
+                        //while (true) {
+                        //    const { done, value } = await reader.read();
+                        //    if (done) { break; }
+                        //    allChunks.set(value, receivedLength);
+                        //    receivedLength += value.length;
+                        //    if (progressCallback) { progressCallback(uniqueId, 0, 0, receivedLength, contentLength); }
+                        //}
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) {
+                                break;
+                            }
+                            chunks.push(value);
+                            receivedLength += value.length;
+                            if (progressCallback) {
+                                progressCallback(uniqueId, 0, 0, receivedLength, contentLength);
+                            }
+                        }
+                        const allChunks = new Uint8Array(receivedLength);
+                        let position = 0;
+                        for (const chunk of chunks) {
+                            allChunks.set(chunk, position);
+                            position += chunk.length;
+                        }
+                        //console.log(Date.now() + " - blob is streamed: " + receivedLength + "/" + contentLength);
+                        return new Blob([allChunks]);
+                        //return new Response(allChunks, {
+                        //   status: fetchResponse.status,
+                        //   statusText: fetchResponse.statusText,
+                        //   headers: fetchResponse.headers
+                        //});
+                        //} catch(err) {
+                        //    throw err;
+                    }
+                    finally {
+                        reader.releaseLock();
                     }
                 }
                 /**
@@ -328,6 +435,34 @@ System.register('ConcurrentFetcher', [], (function (exports) {
                  */
                 abortAll() {
                     this.abortManager.abortAll();
+                }
+                /**
+                 * Returns a new Error with a common error message.
+                 */
+                CommonError(errorType, message) {
+                    let errorMessage = "";
+                    switch (errorType) {
+                        case "ArgumentEmpty":
+                            errorMessage = "Argument empty: " + message;
+                            break;
+                        case "ArgumentMissing":
+                            errorMessage = "Argument missing: " + message;
+                            break;
+                        case "InvalidArgument":
+                            errorMessage = "Argument is invalid: " + message;
+                            break;
+                        case "DuplicateKey":
+                            errorMessage = "Duplicate key: " + message;
+                            break;
+                        case "ValueError":
+                            errorMessage = "Value error: " + message;
+                            break;
+                        default:
+                            errorMessage = message;
+                    }
+                    const error = new Error(errorMessage);
+                    error.name = errorType;
+                    return error;
                 }
             } exports("ConcurrentFetcher", ConcurrentFetcher);
 
