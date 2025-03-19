@@ -6,7 +6,7 @@ A javascript class for managing concurrent fetch requests.
 
 The Fetch Web API is a neat tool for fetching/getting network resources in web applications. And although fetch() is generally easy to use, there are a few nuances in regards to error handling, asynchronous and concurrent processing, cancellation and so forth :-)
 
-The ConcurrentFetcher class addresses the core challenges of concurrent requests, error handling, and cancellation.
+The ConcurrentFetcher class addresses the core challenges of concurrent requests, error handling, large data, and controlled cancellation.
 </header>
 
 ## Availability
