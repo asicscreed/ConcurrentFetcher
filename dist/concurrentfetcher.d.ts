@@ -29,7 +29,7 @@ export declare class JsonParseError extends SyntaxError {
 export declare class AbortManager {
     private controllers;
     /**
-    */
+     */
     constructor();
     /**
      * Creates a new AbortController for a fetch request identified by a Unique Id.
@@ -90,7 +90,6 @@ export declare class ConcurrentFetcher {
     private requests;
     private errors;
     private abortManager;
-    private commonErrors;
     /**
      * @param {array} requests - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
@@ -118,12 +117,12 @@ export declare class ConcurrentFetcher {
      */
     constructor(requests: RequestItem[]);
     /**
-      * Helper method to introduce a delay (in milliseconds)
-      */
+     * Helper method to introduce a delay (in milliseconds)
+     */
     delay(ms: number): Promise<unknown>;
     /**
-      * Retry logic for each individual fetch request
-      */
+     * Retry logic for each individual fetch request
+     */
     fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, forceReader: boolean, cutoffAmount: number, progressCallback: myprogressCallback | undefined, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching.
@@ -137,7 +136,7 @@ export declare class ConcurrentFetcher {
      *  - results: any[];
      *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
-    concurrentFetch({ progressCallback }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResponse>;
+    concurrentFetch({ progressCallback, }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResponse>;
     /**
      *  Reads text-/json-data in chunks.
      *

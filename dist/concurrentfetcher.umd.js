@@ -16,7 +16,7 @@
         constructor(message, url, status) {
             super(message);
             //this.name = this.constructor.name; minified...
-            this.name = "FetchError";
+            this.name = 'FetchError';
             this.url = url;
             this.status = status;
         }
@@ -32,7 +32,7 @@
         constructor(message, url) {
             super(message);
             //this.name = this.constructor.name; minified...
-            this.name = "JsonParseError";
+            this.name = 'JsonParseError';
             this.url = url;
         }
     }
@@ -42,7 +42,7 @@
      */
     class AbortManager {
         /**
-        */
+         */
         constructor() {
             this.controllers = new Map();
         }
@@ -89,6 +89,10 @@
      * @see AbortController {@link https://developer.mozilla.org/en-US/docs/Web/API/AbortController}
      */
     class ConcurrentFetcher {
+        //private commonErrors = {
+        //  invalidOperation: 'Invalid operation',
+        //  unAuthorized: 'You are not authorized to use this function',
+        //};
         /**
          * @param {array} requests - An array of:
          * - URL: the URL (or resource) for the fetch request. This can be any one of:
@@ -115,16 +119,12 @@
          *   - text/json data will be read in chunks if cutoffAmount (is reached) and returned as blob data.
          */
         constructor(requests) {
-            this.commonErrors = {
-                invalidOperation: 'Invalid operation',
-                unAuthorized: 'You are not authorized to use this function'
-            };
             if (!Array.isArray(requests)) {
-                throw this.CommonError("InvalidArgument", "requests");
+                throw this.CommonError('InvalidArgument', 'requests');
             }
             const reqLen = requests.length;
             if (reqLen < 1) {
-                throw this.CommonError("ArgumentEmpty", "requests");
+                throw this.CommonError('ArgumentEmpty', 'requests');
             }
             const reqArray = [];
             for (let i = 0; i < reqLen; i++) {
@@ -133,7 +133,7 @@
             for (let i = 0; i < reqLen; i++) {
                 if (requests[i].requestId) {
                     if (reqArray.includes(requests[i].requestId)) {
-                        throw this.CommonError("DuplicateKey", 'requestId = ' + requests[i].requestId);
+                        throw this.CommonError('DuplicateKey', 'requestId = ' + requests[i].requestId);
                     }
                     else {
                         reqArray.push(requests[i].requestId);
@@ -145,18 +145,20 @@
             this.abortManager = new AbortManager();
         }
         /**
-          * Helper method to introduce a delay (in milliseconds)
-          */
+         * Helper method to introduce a delay (in milliseconds)
+         */
         delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+            return new Promise((resolve) => setTimeout(resolve, ms));
         }
         /**
-          * Retry logic for each individual fetch request
-          */
+         * Retry logic for each individual fetch request
+         */
         async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback, countRetries = 0) {
             let responseStatus = 200;
             try {
-                const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
+                const _url = typeof Request !== 'undefined' && url instanceof Request
+                    ? url.clone()
+                    : url;
                 const response = await fetch(_url, fetchWithSignal);
                 ////console.log("response.statusText =", response.statusText);
                 ////console.log("response.userFinalURL =", response.useFinalURL);
@@ -169,10 +171,10 @@
                 if (response.headers) {
                     response.headers.forEach((value, key) => {
                         //console.log("response.header =", `${key} ==> ${value}`);
-                        if (key.toLowerCase() == "content-type") {
+                        if (key.toLowerCase() == 'content-type') {
                             contentType = value.toLowerCase();
                         }
-                        else if (key.toLowerCase() == "content-length") {
+                        else if (key.toLowerCase() == 'content-length') {
                             contentLength = parseInt(value);
                         }
                     });
@@ -184,7 +186,10 @@
                 let returnData;
                 if (contentType.match(/application\/[^+]*[+]?(json);?.*/i)) {
                     if (forceResponseReader) {
-                        if (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body) {
+                        if (cutoffAmount > 0 &&
+                            contentLength > cutoffAmount * 1024 &&
+                            !response.bodyUsed &&
+                            response.body) {
                             returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                             //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                             //data = await resp.blob();
@@ -197,9 +202,12 @@
                         returnData = await response.json();
                     }
                 }
-                else if (contentType.includes("text/")) {
+                else if (contentType.includes('text/')) {
                     if (forceResponseReader) {
-                        if (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body) {
+                        if (cutoffAmount > 0 &&
+                            contentLength > cutoffAmount * 1024 &&
+                            !response.bodyUsed &&
+                            response.body) {
                             returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                             //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                             //data = await resp.blob();
@@ -212,8 +220,13 @@
                         returnData = await response.text();
                     }
                 }
-                else { // blob!
-                    if (forceResponseReader || (cutoffAmount > 0 && contentLength > (cutoffAmount * 1024) && !response.bodyUsed && response.body)) {
+                else {
+                    // blob!
+                    if (forceResponseReader ||
+                        (cutoffAmount > 0 &&
+                            contentLength > cutoffAmount * 1024 &&
+                            !response.bodyUsed &&
+                            response.body)) {
                         returnData = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                         //const resp = await this.fetchBlobStream(response, uniqueId, contentType, contentLength, progressCallback);
                         //data = await resp.blob();
@@ -251,24 +264,28 @@
          *  - results: any[];
          *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
          */
-        async concurrentFetch({ progressCallback } = {}) {
+        async concurrentFetch({ progressCallback, } = {}) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const results = [];
             let completedCount = 0;
             const fetchPromises = this.requests.map((request, index) => {
-                var _a;
-                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, forceReader = false, cutoffAmount = 0 } = request;
-                const uniqueId = (_a = (requestId)) !== null && _a !== void 0 ? _a : index.toString();
-                const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout)]) : this.abortManager.createSignal(uniqueId);
+                const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, forceReader = false, cutoffAmount = 0, } = request;
+                const uniqueId = requestId !== null && requestId !== void 0 ? requestId : index.toString();
+                const abortSignal = abortTimeout > 0
+                    ? AbortSignal.any([
+                        this.abortManager.createSignal(uniqueId),
+                        AbortSignal.timeout(abortTimeout),
+                    ])
+                    : this.abortManager.createSignal(uniqueId);
                 // Default options (can be overridden)
                 // including Representation header: Content-Type
                 const defaultOptions = {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
+                        Accept: 'application/json',
                         'Content-Type': 'application/json; charset: UTF-8',
                     },
-                    signal: abortSignal
+                    signal: abortSignal,
                 };
                 const fetchWithSignal = { ...defaultOptions, ...fetchOptions }; // signal: abortSignal
                 // Must remove 'Content-Type': 'multipart/form-data', since server expects:
@@ -283,7 +300,8 @@
                     }
                 })
                     .catch((err) => {
-                    if ((err instanceof SyntaxError) || (err.name && err.name === "SyntaxError")) {
+                    if (err instanceof SyntaxError ||
+                        (err.name && err.name === 'SyntaxError')) {
                         err = new JsonParseError(err.message, url);
                         //} else if ((err instanceof TypeError) || (err.name && err.name === "TypeError")) {
                         //  err = new FetchError('Fetch Network error! error: '+err.message, url, 500);
@@ -305,13 +323,18 @@
             });
             try {
                 await Promise.all(fetchPromises);
-                const filteredResults = results ? results.filter((result) => result !== null) : [];
+                const filteredResults = results
+                    ? results.filter((result) => result !== null)
+                    : [];
                 return { results: filteredResults, errors: this.errors };
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             }
             catch (err) {
-                this.errors.push({ uniqueId: "unknown", url: "unknown", error: err });
-                this.requests.forEach((request) => { var _a, _b; return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : "unknown", null, err, this.abortManager); });
+                this.errors.push({ uniqueId: 'unknown', url: 'unknown', error: err });
+                this.requests.forEach((request) => {
+                    var _a, _b;
+                    return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null && _b !== void 0 ? _b : 'unknown', null, err, this.abortManager);
+                });
                 return { results: [], errors: this.errors };
             }
         }
@@ -326,8 +349,8 @@
             const reader = fetchResponse.body.getReader();
             let done, value;
             let textChunks = '';
-            const decoder = new TextDecoder("utf-8");
-            while ({ done, value } = await reader.read(), !done) {
+            const decoder = new TextDecoder('utf-8');
+            while (({ done, value } = await reader.read()), !done) {
                 textChunks += decoder.decode(value, { stream: true });
                 if (progressCallback) {
                     progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
@@ -410,7 +433,7 @@
          *
          */
         shouldRetryRequest(responseStatus, maxRetries, statusCodesToRetry, countRetries) {
-            if ((maxRetries - countRetries) < 1) {
+            if (maxRetries - countRetries < 1) {
                 return false;
             }
             let isInRange = false;
@@ -441,22 +464,22 @@
          * Returns a new Error with a common error message.
          */
         CommonError(errorType, message) {
-            let errorMessage = "";
+            let errorMessage = '';
             switch (errorType) {
-                case "ArgumentEmpty":
-                    errorMessage = "Argument empty: " + message;
+                case 'ArgumentEmpty':
+                    errorMessage = 'Argument empty: ' + message;
                     break;
-                case "ArgumentMissing":
-                    errorMessage = "Argument missing: " + message;
+                case 'ArgumentMissing':
+                    errorMessage = 'Argument missing: ' + message;
                     break;
-                case "InvalidArgument":
-                    errorMessage = "Argument is invalid: " + message;
+                case 'InvalidArgument':
+                    errorMessage = 'Argument is invalid: ' + message;
                     break;
-                case "DuplicateKey":
-                    errorMessage = "Duplicate key: " + message;
+                case 'DuplicateKey':
+                    errorMessage = 'Duplicate key: ' + message;
                     break;
-                case "ValueError":
-                    errorMessage = "Value error: " + message;
+                case 'ValueError':
+                    errorMessage = 'Value error: ' + message;
                     break;
                 default:
                     errorMessage = message;
@@ -473,3 +496,4 @@
     exports.JsonParseError = JsonParseError;
 
 }));
+//# sourceMappingURL=concurrentfetcher.umd.js.map
