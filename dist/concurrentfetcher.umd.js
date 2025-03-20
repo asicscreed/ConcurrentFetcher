@@ -496,4 +496,3 @@
     exports.JsonParseError = JsonParseError;
 
 }));
-//# sourceMappingURL=concurrentfetcher.umd.js.map

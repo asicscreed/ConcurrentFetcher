@@ -4,34 +4,34 @@ export default [
 		output: [
 			{
 				file: 'dist/concurrentfetcher.amd.js',
-				sourcemap: true,
+				sourcemap: false,
 				format: 'amd'
 			},
 			{
 				file: 'dist/concurrentfetcher.common.js',
-				sourcemap: true,
+				sourcemap: false,
 				format: 'cjs'
 			},
 			{
 				file: 'dist/concurrentfetcher.es.js',
-				sourcemap: true,
+				sourcemap: false,
 				format: 'es'
 			},
 			{
 				file: 'dist/concurrentfetcher.iife.js',
-				sourcemap: true,
+				sourcemap: false,
                 name: 'ConcurrentFetcher',
 				format: 'iife'
 			},
 			{
 				file: 'dist/concurrentfetcher.system.js',
-				sourcemap: true,
+				sourcemap: false,
                 name: 'ConcurrentFetcher',
 				format: 'system'
 			},
 			{
 				file: 'dist/concurrentfetcher.umd.js',
-				sourcemap: true,
+				sourcemap: false,
                 name: 'ConcurrentFetcher',
 				format: 'umd'
 			}

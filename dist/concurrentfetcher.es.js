@@ -485,4 +485,3 @@ class ConcurrentFetcher {
 }
 
 export { AbortManager, ConcurrentFetcher, FetchError, JsonParseError };
-//# sourceMappingURL=concurrentfetcher.es.js.map
