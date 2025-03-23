@@ -148,7 +148,7 @@ body {
   <option value="dummyjson">DummyJSON</option>
 </select>
 <br><label for="phpTimeout">Timeout for backend request:</label>
-<input type="number" name="phpTimeout" id="phpTimeout" value="3" min="1" max="90"/>
+<input type="number" name="phpTimeout" id="phpTimeout" value="2" min="1" max="90"/>
 <br><label for="abortTimeout">Timeout for abortSignal:</label>
 <input type="number" name="abortTimeout" id="abortTimeout" value="0"/>
 <br><label for="userTimeout">Timeout for user controlled event:</label>
@@ -164,8 +164,9 @@ body {
 <p>
 Running requests can be canceled in more ways and here you can test the cancellation of individual fetch requests. See <a href="index.html">other example</a> for cancellation of all running and scheduled requests.
 <br>
-Perform the tests by selecting eiher DummyJSON as backend or have a working backend PHP server for this to work. The backend performs <i>waiting</i> and is controlled by the <i>"Timeout for backend request:"</i>-input. Setting a value of 3, makes the service wait for 3 seconds before it respons with a response. If the request gets a abort signal from the caller while it runs (and waits), then the request will be cancelled.
-<br>NB! The backend is called 2 times. One with a callback and one without. They should behave the same :-)
+Perform the tests by selecting eiher DummyJSON as backend or have a working backend PHP server for this to work. The backend performs <i>waiting</i> and is controlled by the <i>"Timeout for backend request:"</i>-input.
+ Setting a value of 2, makes the backend service wait for 2 seconds before it respond. If the request gets a abort signal from the caller while it runs (and waits), then the request will be cancelled.
+<br>NB! The backend is called 2 times (2x2 secs). One with a callback and one without. They should behave the same :-)
 <br><br>There are 2 methods to control the cancellation of a request:
 <ul>
 <li><i>Timeout for abortSignal:</i> Request timeout - when you don't want a request to last more than a given amount of time...</li>
@@ -213,7 +214,7 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
      if (got_phpTimeout > 90) { got_phpTimeout = 90 };
      reqUrl = "../phpbackend/phpservice.php?action=waitforme&timeout="+got_phpTimeout;
   }
-  reqcounter = 0;
+  reqcounter = 11;
   const requests = [];
   requests.push({
     url: reqUrl,
@@ -223,7 +224,7 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
     callback: (uniqueId, data, error, abortManager) => {
       if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" callback Error: "+error.message+"<br>";
       else result1Div.innerHTML += Date.now()+" - req.id:"+uniqueId+" response:"+JSON.stringify(data)+"<br>";
-      if (data && data.id === 11) abortManager.abortAll(); // NB! Aborts all
+      //if (data && data.id === 11) abortManager.abortAll(); // NB! Aborts all
     }
   });
   reqcounter++;
@@ -242,28 +243,30 @@ runCallbackAndTimeout.onclick = async function runCallbackAndTimeout() {
     }
   }
   fetcher.concurrentFetch({ progressCallback })
-  .then((data) => {
-    const errors = data.errors ?? {};
-    const results = data.results ?? {};
-    // Access individual results from the data.results and data.errors arrays
-    if (errors.length > 0) {
-      progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
-      // errors[n] == {uniqueId, url, error}
-      for (let ii = 0; ii < errors.length; ii++) {
-        const err = errors[ii];
-        errorDiv.innerHTML += Date.now()+" - Response.errors req.id:"+err.uniqueId+" - error.count:"+ii+" Error: "+err.error.message+"<br>";
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          progressDiv.innerHTML += Date.now()+' First error raised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          const rejected = fetchResult.filter(answer => answer.status === 'rejected');
+          if (rejected.length > 0 ) {
+              progressDiv.innerHTML += Date.now()+' Detailed errors: '+JSON.stringify(rejected)+'<br>';
+          } else {
+              progressDiv.innerHTML += Date.now()+' THIS SHOULD NOT HAPPEN! firstErrorRaised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          }
+      } else {
+          progressDiv.innerHTML += Date.now()+' NO ERRORS!<br>';
       }
-    }
-    if (results.length > 0) {
-      for (let ii = 0; ii < results.length; ii++) {
-        const data = results[ii];
-        result2Div.innerHTML += Date.now()+" - Response.results count:"+ii+" data:"+JSON.stringify(data)+"<br>";
+      let gotData = false;
+      for (let i = 0; i < fetchResult.length; i++) {
+          if (fetchResult[i].status !== 'rejected' && fetchResult[i].value && fetchResult[i].value.data) {
+              gotData = true;
+              result2Div.innerHTML += Date.now()+' - req.id:'+fetchResult[i].value.id+' data:'+JSON.stringify(fetchResult[i].value.data)+'<br>';
+          }
       }
-    } else {
-      progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
-    }
-    progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
-    loadingDiv.style.visibility = "hidden";
+      if (!gotData) {
+          progressDiv.innerHTML += Date.now()+' RESULT IS EMPTY<br>';
+      }
+      progressDiv.innerHTML += Date.now()+' ALL PROCESSING IS COMPLETED NOW! TOOK: '+(Date.now()-starttime)+'ms.<br>';
+      loadingDiv.style.visibility = "hidden";
   })
   .catch((e) => {
       loadingDiv.style.visibility = "hidden";

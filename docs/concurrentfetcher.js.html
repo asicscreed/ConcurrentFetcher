@@ -163,8 +163,11 @@ export class ConcurrentFetcher {
             }
         }
         this.requests = requests;
-        this.errors = [];
+        //this.errors = [];
         this.abortManager = new AbortManager();
+        //this.abortOnError = false;
+        //this.abortedOnError = false;
+        this.firstErrorRaised = null;
     }
     /**
      * Helper method to introduce a delay (in milliseconds)
@@ -286,10 +289,12 @@ export class ConcurrentFetcher {
      *  - results: any[];
      *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
-    async concurrentFetch({ progressCallback, } = {}) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const results = [];
+    async concurrentFetch({ progressCallback, abortOnError } = {}) {
+        //const results: any[] = [];
         let completedCount = 0;
+        const _abortOnError = abortOnError !== null &amp;&amp; abortOnError !== void 0 ? abortOnError : false;
+        let _abortedOnError = false;
+        this.firstErrorRaised = null;
         const fetchPromises = this.requests.map((request, index) => {
             const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, forceReader = false, cutoffAmount = 0, } = request;
             const uniqueId = requestId !== null &amp;&amp; requestId !== void 0 ? requestId : index.toString();
@@ -313,51 +318,93 @@ export class ConcurrentFetcher {
             // Must remove 'Content-Type': 'multipart/form-data', since server expects:
             // Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryyEmKNDsBKjB7QEqu
             return this.fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback)
-                .then((data) => {
+                .then((gotData) => {
+                const _timeStamp = Date.now();
+                const fetchResponse = {
+                    id: uniqueId,
+                    stamp: _timeStamp,
+                };
                 if (callback) {
-                    callback(uniqueId, data, null, this.abortManager);
+                    try {
+                        callback(uniqueId, gotData, null, this.abortManager);
+                    }
+                    catch (cbErr) {
+                        console.log('Callback failed:', cbErr);
+                    }
                 }
                 else {
-                    results[index] = data;
+                    fetchResponse.data = gotData;
                 }
+                return Promise.resolve(fetchResponse);
             })
-                .catch((err) => {
-                if (err instanceof SyntaxError ||
-                    (err.name &amp;&amp; err.name === 'SyntaxError')) {
-                    err = new JsonParseError(err.message, url);
-                    //} else if ((err instanceof TypeError) || (err.name &amp;&amp; err.name === "TypeError")) {
-                    //  err = new FetchError('Fetch Network error! error: '+err.message, url, 500);
+                .catch((gotError) => {
+                var _a;
+                const _timeStamp = Date.now();
+                if (!_abortedOnError) {
+                    _abortedOnError = true;
+                    this.firstErrorRaised = {
+                        id: uniqueId,
+                        stamp: _timeStamp,
+                        error: gotError,
+                        message: (_a = gotError.message) !== null &amp;&amp; _a !== void 0 ? _a : 'Error',
+                    };
+                }
+                const fetchResponse = {
+                    id: uniqueId,
+                    stamp: _timeStamp,
+                };
+                if (gotError instanceof SyntaxError ||
+                    (gotError.name &amp;&amp; gotError.name === 'SyntaxError')) {
+                    gotError = new JsonParseError(gotError.message, url);
                 }
                 if (callback) {
-                    callback(uniqueId, null, err, this.abortManager);
+                    try {
+                        callback(uniqueId, null, gotError, this.abortManager);
+                    }
+                    catch (cbErr) {
+                        console.log('Callback failed:', cbErr);
+                    }
                 }
                 else {
-                    this.errors.push({ uniqueId, url, error: err });
-                    results[index] = null;
+                    fetchResponse.error = gotError;
                 }
+                if (_abortOnError) {
+                    this.abortAll();
+                }
+                return Promise.reject(fetchResponse);
             })
                 .finally(() => {
                 completedCount++;
-                if (progressCallback) {
+                if (progressCallback &amp;&amp; !_abortedOnError) {
                     progressCallback(uniqueId, completedCount, this.requests.length, 0, 0);
                 }
             });
         });
         try {
-            await Promise.all(fetchPromises);
-            const filteredResults = results
-                ? results.filter((result) => result !== null)
-                : [];
-            return { results: filteredResults, errors: this.errors };
+            // Should I wait or should I go?
+            return await Promise.allSettled(fetchPromises);
+            //if (_abortOnError) {
+            //  const fetchResults = await Promise.allSettled(fetchPromises);
+            //  if (_abortedOnError) {
+            //    const rejected = fetchResults.filter(answer => answer.status === 'rejected');
+            //    if (rejected.length > 0) {
+            //      return rejected;
+            //    }
+            //  }
+            //  return fetchResults;
+            //} else {
+            //  return await Promise.allSettled(fetchPromises);
+            //}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }
-        catch (err) {
-            this.errors.push({ uniqueId: 'unknown', url: 'unknown', error: err });
+        catch (gotError) {
+            _abortedOnError = true;
+            this.abortAll();
             this.requests.forEach((request) => {
                 var _a, _b;
-                return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null &amp;&amp; _b !== void 0 ? _b : 'unknown', null, err, this.abortManager);
+                return (_a = request.callback) === null || _a === void 0 ? void 0 : _a.call(request, (_b = request.requestId) !== null &amp;&amp; _b !== void 0 ? _b : 'unknown', null, gotError, this.abortManager);
             });
-            return { results: [], errors: this.errors };
+            throw gotError;
         }
     }
     /**
@@ -372,7 +419,7 @@ export class ConcurrentFetcher {
         let done, value;
         let textChunks = '';
         const decoder = new TextDecoder('utf-8');
-        while (({ done, value } = await reader.read()), !done) {
+        while ((({ done, value } = await reader.read()), !done)) {
             textChunks += decoder.decode(value, { stream: true });
             if (progressCallback) {
                 progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
@@ -448,6 +495,13 @@ export class ConcurrentFetcher {
         finally {
             reader.releaseLock();
         }
+    }
+    /**
+     *  Returns the first error raised - or null.
+     *
+     */
+    getErrorRaised() {
+        return this.firstErrorRaised;
     }
     /**
      *  Check whether or not a retry-condition is met.

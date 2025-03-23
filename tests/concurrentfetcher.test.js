@@ -19,13 +19,13 @@ describe('ConcurrentFetcher class', () => {
         const requests = [ { url: 'https://api.example.com/doesntmatter' } ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         expect(errors.length).toEqual(0);
         expect(results.length).toEqual(1);
         if (results.length > 0) {
 //console.log(results);
-            expect(results[0]).toEqual(mockResponseData);
+            expect(results[0].value.data).toEqual(mockResponseData);
         }
     });
 
@@ -46,12 +46,12 @@ describe('ConcurrentFetcher class', () => {
         const requests = [ { url: tstUrl } ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         expect(errors.length).toEqual(0);
         expect(results.length).toEqual(1);
         if (results.length > 0) {
-            expect(results[0]).toEqual(mockResponseData);
+            expect(results[0].value.data).toEqual(mockResponseData);
         }
     });
 
@@ -69,20 +69,20 @@ describe('ConcurrentFetcher class', () => {
         const requests = [ { url: tstUrl, requestId: tstRequestId } ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         expect(results.length).toEqual(0);
         expect(errors.length).toEqual(1);
-        if (errors.length == 1) {
-            const { uniqueId, url, error } = errors[0];
+        if (errors.length > 0) {
+//console.log(errors[0]);
+            const { id, stamp, error } = errors[0].reason;
             //const errorType = (error instanceof ConcurrentFetcher.FetchError) ? 'FetchError' : 'Error';
             //expect(errorType).toEqual('FetchError');
             //if (errorType == 'FetchError') { expect(error.status).toEqual(tstStatus); }
             if (error instanceof ConcurrentFetcher.FetchError) { expect(error.status).toEqual(tstStatus); }
             expect(error).toBeInstanceOf(ConcurrentFetcher.FetchError);
             expect(error).toBeInstanceOf(Error);
-            expect(url).toEqual(tstUrl);
-            expect(uniqueId).toEqual(tstRequestId);
+            expect(id).toEqual(tstRequestId);
         }
     });
 
@@ -97,20 +97,19 @@ describe('ConcurrentFetcher class', () => {
         const requests = [ { url: tstUrl, requestId: tstRequestId } ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         expect(results.length).toEqual(0);
         expect(errors.length).toEqual(1);
-        if (errors.length == 1) {
-            const { uniqueId, url, error } = errors[0];
+        if (errors.length > 0) {
+            const { id, stamp, error } = errors[0].reason;
             //const errorType = (error instanceof TypeError) ? "TypeError" : "Error";
             //expect(errorType).toEqual('TypeError');
             //if (errorType == 'TypeError') { expect(error.message).toEqual(tstMessage); }
             if (error instanceof TypeError) { expect(error.message).toEqual(tstMessage); }
             expect(error).toBeInstanceOf(TypeError);
             expect(error).toBeInstanceOf(Error);
-            expect(url).toEqual(tstUrl);
-            expect(uniqueId).toEqual(tstRequestId);
+            expect(id).toEqual(tstRequestId);
         }
     });
 
@@ -136,13 +135,13 @@ describe('ConcurrentFetcher class', () => {
 
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         expect(errors.length).toEqual(0);
         expect(results.length).toEqual(1);
         if (results.length > 0) {
 //console.log(results);
-            expect(results[0]).toEqual(mockResponseData);
+            expect(results[0].value.data).toEqual(mockResponseData);
         }
     });
 
@@ -169,23 +168,22 @@ describe('ConcurrentFetcher class', () => {
         ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         const data = await fetcher.concurrentFetch();
-        const errors = data.errors ?? {};
-        const results = data.results ?? {};
+        const errors = data.filter(answer => answer.status === 'rejected');
+        const results = data.filter(answer => answer.status !== 'rejected');
         //if (results.length == 1) { console.log(results[0]); }
         expect(results.length).toEqual(0);
         expect(errors.length).toEqual(1);
-        if (errors.length == 1) {
+        if (errors.length > 0) {
         ////    console.log(errors);
-            const { uniqueId, url, error } = errors[0];
+            const { id, stamp, error } = errors[0].reason;
             //const errorType = (error instanceof ConcurrentFetcher.JsonParseError) ?
             //        'JsonParseError' : (error instanceof SyntaxError) ?
             //        'SyntaxError' : 'Error';
             //expect(errorType).toEqual('JsonParseError');
-          //expect(error).toBeInstanceOf(ConcurrentFetcher.JsonParseError);
+            //expect(error).toBeInstanceOf(ConcurrentFetcher.JsonParseError);
             expect(error).toBeInstanceOf(SyntaxError);
             expect(error).toBeInstanceOf(Error);
-            expect(url).toEqual(tstUrl);
-            expect(uniqueId).toEqual(tstRequestId);
+            expect(id).toEqual(tstRequestId);
         }
     });
 

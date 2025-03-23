@@ -51,6 +51,13 @@ export declare class AbortManager {
      */
     abortAll(): void;
 }
+export interface ConcurrentFetchResponse {
+    id: string;
+    stamp: number;
+    data?: any;
+    error?: Error;
+    message?: string;
+}
 export type myCallback = (uniqueId: string, data: any, // eslint-disable-line @typescript-eslint/no-explicit-any
 error: Error | null, abortManager: AbortManager) => void;
 export interface RequestItem {
@@ -65,17 +72,10 @@ export interface RequestItem {
     forceReader?: boolean;
     cutoffAmount?: number;
 }
-export interface ConcurrentFetchResponse {
-    results: any[];
-    errors: {
-        uniqueId: string;
-        url: string | Request;
-        error: Error;
-    }[];
-}
 export type myprogressCallback = (uniqueId: string, completedRequestCount: number, totalRequestCount: number, completedByteCount: number, totalByteCount: number) => void;
 export interface ConcurrentFetchOptions {
     progressCallback?: myprogressCallback;
+    abortOnError?: boolean;
 }
 /**
  * ConcurrentFetcher class, which manages concurrent fetch requests and cancellation.
@@ -88,8 +88,8 @@ export interface ConcurrentFetchOptions {
  */
 export declare class ConcurrentFetcher {
     private requests;
-    private errors;
     private abortManager;
+    private firstErrorRaised;
     /**
      * @param {array} requests - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
@@ -136,7 +136,7 @@ export declare class ConcurrentFetcher {
      *  - results: any[];
      *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
      */
-    concurrentFetch({ progressCallback, }?: ConcurrentFetchOptions): Promise<ConcurrentFetchResponse>;
+    concurrentFetch({ progressCallback, abortOnError }?: ConcurrentFetchOptions): Promise<any[]>;
     /**
      *  Reads text-/json-data in chunks.
      *
@@ -147,6 +147,11 @@ export declare class ConcurrentFetcher {
      *
      */
     fetchBlobStream(fetchResponse: Response, uniqueId: string, contentType: string, contentLength: number, progressCallback: myprogressCallback | undefined): Promise<Blob>;
+    /**
+     *  Returns the first error raised - or null.
+     *
+     */
+    getErrorRaised(): ConcurrentFetchResponse | null;
     /**
      *  Check whether or not a retry-condition is met.
      *  Based on the response.status and the statusCodesToRetry configured.

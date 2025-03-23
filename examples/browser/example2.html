@@ -27,11 +27,10 @@ async function example2() {
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch()
-  .then(function (data) {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      if (errors.length > 0 ) {document.write("<br><br>ERROR: errors not empty: "+JSON.stringify(errors)+"<br>");}
-      if (results.length > 0 ) {document.write("<br><br>ERROR: results not empty: "+JSON.stringify(results)+"<br>");}
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          document.write('<br><b>First error raised:</b> '+JSON.stringify(fetcher.getErrorRaised()));
+      }
   })
   .catch((e) => {
       document.write("<br>ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message);

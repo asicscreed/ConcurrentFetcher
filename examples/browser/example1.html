@@ -16,12 +16,18 @@ async function example1() {
   ];
 
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch()
-  .then((data) => {
-    const errors = data.errors ?? {};
-    const results = data.results ?? {};
-    if (errors.length > 0) document.write(JSON.stringify(errors));
-    if (results.length > 0) document.write(JSON.stringify(results));
+  fetcher.concurrentFetch({ abortOnError: true })
+  .then((fetchResults) => {
+    if (fetcher.getErrorRaised()) { console.log(fetcher.getErrorRaised()); }
+    for (let i = 0; i < fetchResults.length; i++) {
+      if (fetchResults[i].status === 'rejected') {
+        const { id, stamp, error } = fetchResults[i].reason;
+        document.write(error.toString());
+      } else {
+        const { id, stamp, data } = fetchResults[i].value;
+        document.write(JSON.stringify(data));
+      }
+    }
   })
   .catch((e) => {
       document.write("<br>ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message);

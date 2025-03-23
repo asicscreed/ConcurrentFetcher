@@ -31,9 +31,11 @@
         ];
         const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
         fetcher.concurrentFetch()
-        .then(function (data) {
-            if (data.results.length > 0) {
-                user = data.results[0];
+        .then((fetchResults) => {
+            const errors = fetchResults.filter(answer => answer.status === 'rejected');
+            const results = fetchResults.filter(answer => answer.status !== 'rejected');
+            if (results.length > 0) {
+                user = results[0].value.data;
                 document.getElementById('useravatar').src = user.avatar_url;
                 document.getElementById('username').innerHTML = user.login;
             }

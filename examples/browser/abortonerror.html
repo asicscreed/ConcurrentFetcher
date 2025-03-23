@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
+<head>
+<body>
+<label for="checkAbortOnError">AbortOnError </label>
+<input type="checkbox" id="checkAbortOnError" name="checkAbortOnError">
+<button onclick="clean();">Clean</button>
+<button onclick="success();">Success</button>
+<button onclick="failure();">Failure</button>
+<p>[<a href="./">BACK TO START</a>]</p>
+<br><div id="logDiv" style="word-wrap: break-word;"></div>
+<br><div id="progressDiv" style="word-wrap: break-word;"></div>
+<script>
+'option strict';
+
+const logDiv = document.getElementById('logDiv');
+const progressDiv = document.getElementById('progressDiv');
+const checkAbortOnError = document.getElementById('checkAbortOnError');
+
+async function clean() {
+     logDiv.innerHTML = '';
+     progressDiv.innerHTML = '';
+}
+
+async function success() {
+    fetchit(false   );
+}
+
+async function failure() {
+    fetchit(true);
+}
+
+async function fetchit(failure) {
+  const requests = [
+    { url: "https://jsonplaceholder.typicode.com/photos/1" },
+    { url: "https://jsonplaceholder.typicode.com/comments/1" }
+  ];
+  if (failure === true) {
+    requests.push({ url: "https://jsonplaceholder.typicode.com/invalid-url/1" });
+  }
+  requests.push(
+    { url: "https://jsonplaceholder.typicode.com/photos/2" },
+    { url: "https://jsonplaceholder.typicode.com/comments/2" }
+  );
+  const progressCallback = (uniqueId, completed, total) => {
+    progressDiv.innerHTML += Date.now()+" - id:"+uniqueId+": "+completed+"/"+total+"<br>";
+  };
+  const abortOnError = checkAbortOnError.checked;
+  const starttime = Date.now();
+  progressDiv.innerHTML += starttime+" - STARTING - <br>";
+  const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+  fetcher.concurrentFetch({progressCallback, abortOnError})
+  .then((results) => {
+    console.log('getErrorRaised: ', fetcher.getErrorRaised());
+    console.log('results received: ', results);
+    if (Array.isArray(results) && results.length > 0) {
+        for (let i = 0; i < results.length; i++) {
+            logDiv.innerHTML += Date.now()+" - result: "+JSON.stringify(results[i])+'<br>';
+        }
+    }
+    const endtime = Date.now();
+    progressDiv.innerHTML += endtime+" - FINISHED - took:"+(endtime-starttime)+"ms. <br>";
+  })
+  .catch((e) => {
+      console.log('error received:', e);
+      logDiv.innerHTML += "<br>ERROR HAS BEEN CATCHED: "+JSON.stringify(e);
+  });
+}
+</script>
+</body>
+</html>

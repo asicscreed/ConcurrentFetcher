@@ -85,6 +85,29 @@ export class AbortManager {
   }
 }
 
+//export interface ShortFormResultValue {
+//  id: string,
+//  stamp: number,
+//  cbError?: Error,
+//  error?: Error,
+//  data?: any
+//}
+
+export interface ConcurrentFetchResponse {
+  id: string;
+  stamp: number;
+  data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  error?: Error;
+  message?: string;
+}
+
+//export interface PromiseResultValue<T> {
+//    status: string;
+//    value: T;
+//}
+
+//type PromiseSettledResult<T> = PromiseFulfilledResult<T> | PromiseRejectedResult;
+
 export type myCallback = (
   uniqueId: string,
   data: any, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -105,13 +128,18 @@ export interface RequestItem {
   cutoffAmount?: number;
 }
 
-export interface ConcurrentFetchResponse {
-  // results could also be { uniqueId: string; data: any }[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  results: any[];
-  // then errors should be { uniqueId: string; error: Error }[];
-  errors: { uniqueId: string; url: string | Request; error: Error }[];
-}
+//export interface ConcurrentFetchResponse {
+//    id: string,
+//    data?: any,
+//    stamp?: number;
+//    cbError?: Error;
+//}
+//export interface ConcurrentFetchResponse {
+// results could also be { uniqueId: string; data: any }[];
+//  results: any[];
+// then errors should be { uniqueId: string; error: Error }[];
+//  errors: { uniqueId: string; url: string | Request; error: Error }[];
+//}
 
 export type myprogressCallback = (
   uniqueId: string,
@@ -123,6 +151,7 @@ export type myprogressCallback = (
 
 export interface ConcurrentFetchOptions {
   progressCallback?: myprogressCallback;
+  abortOnError?: boolean;
 }
 
 /**
@@ -136,8 +165,11 @@ export interface ConcurrentFetchOptions {
  */
 export class ConcurrentFetcher {
   private requests: RequestItem[];
-  private errors: { uniqueId: string; url: string | Request; error: Error }[];
+  //private errors: { uniqueId: string; url: string | Request; error: Error }[];
   private abortManager: AbortManager;
+  //private abortOnError: boolean;
+  //private abortedOnError: boolean;
+  private firstErrorRaised: ConcurrentFetchResponse | null;
   //private commonErrors = {
   //  invalidOperation: 'Invalid operation',
   //  unAuthorized: 'You are not authorized to use this function',
@@ -193,8 +225,11 @@ export class ConcurrentFetcher {
       }
     }
     this.requests = requests;
-    this.errors = [];
+    //this.errors = [];
     this.abortManager = new AbortManager();
+    //this.abortOnError = false;
+    //this.abortedOnError = false;
+    this.firstErrorRaised = null;
   }
 
   /**
@@ -381,12 +416,15 @@ export class ConcurrentFetcher {
    *  - results: any[];
    *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
    */
-  async concurrentFetch({
-    progressCallback,
-  }: ConcurrentFetchOptions = {}): Promise<ConcurrentFetchResponse> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results: any[] = [];
+  async concurrentFetch(
+    { progressCallback, abortOnError }: ConcurrentFetchOptions = {},
+  ): Promise<any[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
+    //const results: any[] = [];
     let completedCount = 0;
+
+    const _abortOnError = abortOnError ?? false;
+    let _abortedOnError = false;
+    this.firstErrorRaised = null;
 
     const fetchPromises = this.requests.map((request, index) => {
       const {
@@ -425,7 +463,6 @@ export class ConcurrentFetcher {
 
       // Must remove 'Content-Type': 'multipart/form-data', since server expects:
       // Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryyEmKNDsBKjB7QEqu
-
       return this.fetchWithRetry(
         url,
         fetchWithSignal,
@@ -437,32 +474,61 @@ export class ConcurrentFetcher {
         cutoffAmount,
         progressCallback,
       )
-        .then((data) => {
+        .then((gotData) => {
+          const _timeStamp = Date.now();
+          const fetchResponse: ConcurrentFetchResponse = {
+            id: uniqueId,
+            stamp: _timeStamp,
+          };
           if (callback) {
-            callback(uniqueId, data, null, this.abortManager);
+            try {
+              callback(uniqueId, gotData, null, this.abortManager);
+            } catch (cbErr) {
+              console.log('Callback failed:', cbErr);
+            }
           } else {
-            results[index] = data;
+            fetchResponse.data = gotData;
           }
+          return Promise.resolve(fetchResponse);
         })
-        .catch((err: Error) => {
+        .catch((gotError: Error) => {
+          const _timeStamp = Date.now();
+          if (!_abortedOnError) {
+            _abortedOnError = true;
+            this.firstErrorRaised = {
+              id: uniqueId,
+              stamp: _timeStamp,
+              error: gotError,
+              message: gotError.message ?? 'Error',
+            };
+          }
+          const fetchResponse: ConcurrentFetchResponse = {
+            id: uniqueId,
+            stamp: _timeStamp,
+          };
           if (
-            err instanceof SyntaxError ||
-            (err.name && err.name === 'SyntaxError')
+            gotError instanceof SyntaxError ||
+            (gotError.name && gotError.name === 'SyntaxError')
           ) {
-            err = new JsonParseError(err.message, url);
-            //} else if ((err instanceof TypeError) || (err.name && err.name === "TypeError")) {
-            //  err = new FetchError('Fetch Network error! error: '+err.message, url, 500);
+            gotError = new JsonParseError(gotError.message, url);
           }
           if (callback) {
-            callback(uniqueId, null, err, this.abortManager);
+            try {
+              callback(uniqueId, null, gotError, this.abortManager);
+            } catch (cbErr) {
+              console.log('Callback failed:', cbErr);
+            }
           } else {
-            this.errors.push({ uniqueId, url, error: err });
-            results[index] = null;
+            fetchResponse.error = gotError;
           }
+          if (_abortOnError) {
+            this.abortAll();
+          }
+          return Promise.reject(fetchResponse);
         })
         .finally(() => {
           completedCount++;
-          if (progressCallback) {
+          if (progressCallback && !_abortedOnError) {
             progressCallback(
               uniqueId,
               completedCount,
@@ -475,25 +541,33 @@ export class ConcurrentFetcher {
     });
 
     try {
-      await Promise.all(fetchPromises);
-
-      const filteredResults = results
-        ? results.filter((result) => result !== null)
-        : [];
-
-      return { results: filteredResults, errors: this.errors };
+      // Should I wait or should I go?
+      return await Promise.allSettled(fetchPromises);
+      //if (_abortOnError) {
+      //  const fetchResults = await Promise.allSettled(fetchPromises);
+      //  if (_abortedOnError) {
+      //    const rejected = fetchResults.filter(answer => answer.status === 'rejected');
+      //    if (rejected.length > 0) {
+      //      return rejected;
+      //    }
+      //  }
+      //  return fetchResults;
+      //} else {
+      //  return await Promise.allSettled(fetchPromises);
+      //}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      this.errors.push({ uniqueId: 'unknown', url: 'unknown', error: err });
+    } catch (gotError: any) {
+      _abortedOnError = true;
+      this.abortAll();
       this.requests.forEach((request) =>
         request.callback?.(
           request.requestId ?? 'unknown',
           null,
-          err,
+          gotError,
           this.abortManager,
         ),
       );
-      return { results: [], errors: this.errors };
+      throw gotError;
     }
   }
 
@@ -516,7 +590,7 @@ export class ConcurrentFetcher {
     let done, value;
     let textChunks = '';
     const decoder = new TextDecoder('utf-8');
-    while (({ done, value } = await reader.read()), !done) {
+    while ((({ done, value } = await reader.read()), !done)) {
       textChunks += decoder.decode(value, { stream: true });
       if (progressCallback) {
         progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
@@ -597,6 +671,14 @@ export class ConcurrentFetcher {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  /**
+   *  Returns the first error raised - or null.
+   *
+   */
+  getErrorRaised(): ConcurrentFetchResponse | null {
+    return this.firstErrorRaised;
   }
 
   /**

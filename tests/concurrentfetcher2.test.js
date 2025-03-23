@@ -24,9 +24,14 @@ describe('ConcurrentFetcher', () => {
         mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'result2' }), headers: new Map([["content-type","application/json"]])});
 
         const result = await fetcher.concurrentFetch();
+        const errors = result.filter(answer => answer.status === 'rejected');
+        const results = result.filter(answer => answer.status !== 'rejected');
+//console.log(results);
 
-        expect(result.results).toEqual([{ data: 'result1' }, { data: 'result2' }]);
-        expect(result.errors).toEqual([]);
+        expect(errors.length).toEqual(0);
+        expect(results.length).toEqual(2);
+        expect(results[0].value.data).toEqual({ data: 'result1' });
+        expect(results[1].value.data).toEqual({ data: 'result2' });
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
@@ -41,10 +46,13 @@ describe('ConcurrentFetcher', () => {
         mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'result2' }), headers: new Map([["content-type","application/json"]])});
 
         const result = await fetcher.concurrentFetch();
+        const errors = result.filter(answer => answer.status === 'rejected');
+        const results = result.filter(answer => answer.status !== 'rejected');
 
-        expect(result.results).toEqual([{ data: 'result2' }]);
-        expect(result.errors.length).toBe(1);
-        expect(result.errors[0].error.message).toBe('Fetch error 1');
+        expect(results.length).toBe(1);
+        expect(results[0].value.data).toEqual({ data: 'result2' });
+        expect(errors.length).toBe(1);
+        expect(errors[0].reason.error.message).toBe('Fetch error 1');
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
@@ -55,10 +63,12 @@ describe('ConcurrentFetcher', () => {
         mockFetch.mockResolvedValueOnce({ ok: true, text: async () => '{invalid json}', headers: new Map([["content-type","application/json"]])});
 
         const result = await fetcher.concurrentFetch();
+        const errors = result.filter(answer => answer.status === 'rejected');
+        const results = result.filter(answer => answer.status !== 'rejected');
 
-        expect(result.results).toEqual([]);
-        expect(result.errors.length).toBe(1);
-        expect(result.errors[0].error.name).toBe('TypeError');
+        expect(results.length).toEqual(0);
+        expect(errors.length).toBe(1);
+        expect(errors[0].reason.error.name).toBe('TypeError');
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
@@ -126,10 +136,12 @@ describe('ConcurrentFetcher', () => {
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'result1' }), headers: new Map([["content-type","application/json"]])});
 
       const result = await fetcher.concurrentFetch();
+       const errors = result.filter(answer => answer.status === 'rejected');
+       const results = result.filter(answer => answer.status !== 'rejected');
 
-      expect(result.results.length).toEqual(1);
-      if (result.results.length > 0) {
-        expect(result.results[0]).toEqual({ data: 'result1' });
+      expect(results.length).toEqual(1);
+      if (results.length > 0) {
+        expect(results[0].value.data).toEqual({ data: 'result1' });
       }
     });
 
@@ -184,12 +196,15 @@ describe('ConcurrentFetcher', () => {
         });
 
         const result = await fetcher.concurrentFetch();
+        const errors = result.filter(answer => answer.status === 'rejected');
+        const results = result.filter(answer => answer.status !== 'rejected');
 
         expect(mockReader.read).toHaveBeenCalled();
         expect(mockReader.releaseLock).toHaveBeenCalled();
-        expect(result.results.length).toEqual(1);
-        if (result.results.length > 0) {
-            const blob = result.results[0];
+        expect(errors.length).toEqual(0);
+        expect(results.length).toEqual(1);
+        if (results.length > 0) {
+            const blob = results[0].value.data;
             expect(blob.size).toEqual(totalByteLength);
         }
     });

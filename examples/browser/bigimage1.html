@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>ConcurrentFetcher test</title>
-  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.js"></script>
+  <script type="text/javascript" src="../../dist/concurrentfetcher.iife.min.js"></script>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -49,7 +49,12 @@
 <head>
 <body>
 <h1>Test of various settings of the ConcurrentFetcher javascript class</h1>
-<p>Explanation:</p>
+<p><b>Explanation:</b>
+ First you have to enter an url for an image to fetch. Then hit <i>Get image!</i> and the completion of the fetching will be shown in both logging of percentages and in the progress bar. Finally the image (if valid) will be shown in the bottom of the page.
+<br><i>Plain fetch:</i> will fetch the image without the ConcurrentFetcher class - but the result is the same. This only shows - in the code - how much is actually going on...
+<br>If you don't choose a large image, then you would proably notice progression from 0% to 100% in 1 step.
+</p>
+<p>[<a href="./">BACK TO START</a>]</p>
 <br><br>
 <div id="myProgress">
     <div id="myBar"></div>
@@ -217,16 +222,25 @@ async function concurrentFetchImage(bigimageblobStr) {
     requests.push( { url: bigimageblobStr, cutoffAmount: 1024 } );
     const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
     fetcher.concurrentFetch({ progressCallback })
-    .then((data) => {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      if (errors.length > 0) {
-          console.log(errors);
-          myLog.innerHTML += '<br>'+Date.now()+' - Fetch received errors: '+errors+'<br>';
+    .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          myLog.innerHTML += Date.now()+' First error raised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          const rejected = fetchResult.filter(answer => answer.status === 'rejected');
+          if (rejected.length > 0 ) {
+              myLog.innerHTML += Date.now()+' Detailed errors: '+JSON.stringify(rejected)+'<br>';
+          } else {
+              myLog.innerHTML += Date.now()+' THIS SHOULD NOT HAPPEN! firstErrorRaised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          }
+      } else {
+          myLog.innerHTML += Date.now()+' NO ERRORS!<br>';
       }
-      if (results.length > 0) {
+      let gotData = false;
+      for (let i = 0; i < fetchResult.length; i++) {
+          if (fetchResult[i].status !== 'rejected') {
+              gotData = true;
+              const dataContent = fetchResult[i].value; 
         myLog.innerHTML += '<br>'+Date.now()+' - Got blob. Took '+(Date.now()-starttime)+'ms. - now loading image...<br>';
-        const blob = results[0];
+        const blob = dataContent.data;
         const img = document.createElement('img');
         img.style.display='block';
         img.src = URL.createObjectURL(blob);
@@ -245,6 +259,10 @@ async function concurrentFetchImage(bigimageblobStr) {
             console.log("encodingError: ", encodingError);
             myLog.innerHTML += Date.now()+' - encodingError: '+encodingError+'<br>';
         });
+          }
+      }
+      if (!gotData) {
+          myLog.innerHTML += Date.now()+' RESULT IS EMPTY (which is NOT expected) <br>';
       }
     })
     .catch((fetcError) => {

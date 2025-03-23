@@ -89,13 +89,15 @@ function fillMe(canvas, width, height) {
     //'<img src="https://randomuser.me/api/portraits/men/14.jpg" width="100" class="rounded-circle">'
     const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
     fetcher.concurrentFetch()
-    .then((data) => {
-        if (data.errors.length > 0) {
-            console.log(data.errors);
-            document.getElementById('errorDiv').innerHTML += JSON.stringify(data.errors[0]);
+    .then((fetchResults) => {
+        const errors = fetchResults.filter(answer => answer.status === 'rejected');
+        const results = fetchResults.filter(answer => answer.status !== 'rejected');
+        if (errors.length > 0) {
+            console.log(errors);
+            document.getElementById('errorDiv').innerHTML += JSON.stringify(errors[0]);
         }
-        if (data.results.length > 0) {
-            people.innerHTML = data.results[0].map((person) => {
+        if (results.length > 0) {
+            people.innerHTML = results[0].value.data.map((person) => {
               return (
             '<div class="col"><div class="card shadow-sm">'+
                 '<div class="text-center">'+

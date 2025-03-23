@@ -20,8 +20,8 @@
 <input type='text' name='identicon' id='identicon' value='hello'/>
 <br><label for='noofreq'>No. of requests:</label>
 <input type='number' name='noofreq' id='noofreq' value='1' min='1' max='5'/>
-<br><label for='without'>Without xtra no.:</label>
-<input type='checkbox' name='without' id='without'/>
+<!-- br><label for='without'>Without xtra no.:</label>
+<input type='checkbox' name='without' id='without'/ -->
 <br><div id='container'></div>
 <br><u>ERRORS:</u><br><code id='errorsCode'></code>
 <br><u>PROGRESS:</u><br><code id='progressCode'></code>
@@ -42,7 +42,7 @@ const getIdenticon = document.getElementById('btn1');
 getIdenticon.onclick = async function getIdenticon() {
   const identiconStr = identiconInput.value.trim();
   let noofreq = parseInt(noofreqInput.value);
-  const without = withoutInput.checked;
+  const without = false; //withoutInput.checked;
   progressDiv.innerHTML = '';
   errorDiv.innerHTML = '';
   while (container.firstChild) { container.removeChild(container.lastChild); }
@@ -87,11 +87,10 @@ getIdenticon.onclick = async function getIdenticon() {
   progressDiv.innerHTML += starttime+' starting with '+requests.length+' identicons<br>';
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch({ progressCallback })
-  .then(function (data) {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      if (errors.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: errors not empty: "+JSON.stringify(errors)+"<br>";}
-      if (results.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: results not empty: "+JSON.stringify(results)+"<br>";}
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          errorDiv.innerHTML += Date.now()+" First error raised: "+JSON.stringify(fetcher.getErrorRaised())+"<br>";
+      }
       progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
   })
   .catch((e) => {

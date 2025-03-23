@@ -15,15 +15,21 @@
 <h3>Backend for the requests are <a href="https://jsonplaceholder.typicode.com/">JSONPlaceholder</a> and <a href="https://httpbin.org">httpbin.org</a></h3> 
 <h4>The tests fetches <i>photos</i> and <i>comments</i> from JSONPlaceholder - and - a single call to httpbin.org to show request headers.</h4>
 <p>More examples:
- <a href="./blobexample1.html">Blob Example1</a>,
- <a href="./php_example1.html">Abort Example1</a>,
- <a href="./bigimage1.html">Large Image Example1</a>
+ <a href="./blobexample1.html">Blob Example1</a>
+, <a href="./php_example1.html">Abort Example1</a>
+, <a href="./bigimage1.html">Large Image Example1</a>
+, <a href="./abortonerror.html">Abort On Error</a>
 </p>
-<p>Examples shown in README.md: <a href="./example1.html">Example1</a>, <a href="./example2.html">Example2</a></p>
+<p>Examples shown in README.md:
+ <a href="./example1.html">Example1</a>
+, <a href="./example2.html">Example2</a>
+</p>
 <label for="idno">Id number to fetch:</label>
 <input type="number" name="idno" id="idno" value="10"/>
 &nbsp;<label for="noofreq">No. of requests:</label>
-<input type="number" name="noofreq" id="noofreq" value="5"/>
+<input type="number" name="noofreq" id="noofreq" value="3"/>
+<label for="checkAbortOnError">&nbsp;&nbsp;AbortOnError</label>
+<input type="checkbox" id="checkAbortOnError" name="checkAbortOnError">
 <br>
 <br><u>RESULTS1:</u><br><code id="result1Code"></code>
 <br><u>RESULTS2:</u><br><code id="result2Code"></code>
@@ -43,12 +49,15 @@ When running without callback there will be only 1 response - and that happens w
 </p>
 <br><button id="btn4" onclick="void();">runWithHeadersAndFail</button><p>Calls httpbin to show headers being received. "Accept","Content-Type" and "Accept-Language" is requested.
 <br>And then calls an invalid url (returns 404) - with and without callback - and with and without retry - to show how an error situation is being handled. Check the console log: It must show how many fetches that have been requested. There must be 4!. 1 for <i>httpbin</i> and 2 for <i>jsonplaceholder</i> and 1 extra retry. Furthermore some browers raises the fetch (http) 404 error - others do not...
-<br>No matter which error situation occurs, then it must be (able to be) catched by the solution.</pthe >
+<br>IF AbortOnError is being checked, then all further processing stops after the first error has been raised...
+<br>No matter which error situation occurs, then it must be (able to be) catched by the solution.
+</p>
 <script>
 'option strict';
 
 const idnoInput = document.getElementById('idno');
 const noofreqInput = document.getElementById('noofreq');
+const checkAbortOnError = document.getElementById('checkAbortOnError');
 const progressDiv = document.getElementById('progressCode');
 const result1Div = document.getElementById('result1Code');
 const result2Div = document.getElementById('result2Code');
@@ -63,42 +72,45 @@ runCallbacksAndAbortAll.onclick = async function runCallbacksAndAbortAll() {
   result2Div.innerHTML = '';
   errorDiv.innerHTML = '';
   const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
-    progressDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+": "+completed+"/"+total+"<br>";
+    progressDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+': '+completed+'/'+total+'<br>';
   };
   const requests = [];
   for (let ii = 0, reqid = 0; ii < noofreq && ii < 100 && ii < (500-getidno); ii++) {
     reqid = getidno+ii;
     requests.push({
-      url: "https://jsonplaceholder.typicode.com/photos/"+reqid,
+      url: 'https://jsonplaceholder.typicode.com/photos/'+reqid,
       fetchOptions: { method: 'GET' },
       callback: (uniqueId, data, error, abortManager) => {
-        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" photos Error: "+error.message+"<br>";
-        else result1Div.innerHTML += Date.now()+" - req.id:"+uniqueId+" photos id:"+data.id+" - "+data.title+"<br>";
+        if (error) errorDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+' photos Error: '+error.message+'<br>';
+        else result1Div.innerHTML += Date.now()+' - req.id:'+uniqueId+' photos id:'+data.id+' - '+data.title+'<br>';
         if (data && data.id === 11) abortManager.abortAll(); // NB! Aborts all
       }
     });
     requests.push({
-      url: "https://jsonplaceholder.typicode.com/comments/"+reqid,
+      url: 'https://jsonplaceholder.typicode.com/comments/'+reqid,
       fetchOptions: { method: 'GET' },
       callback: (uniqueId, data, error, abortManager) => {
-        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" comments Error: "+error.message+"<br>";
-        else result2Div.innerHTML += Date.now()+" - req.id:"+uniqueId+" comments id:"+data.id+" - "+data.name+"<br>";
+        if (error) errorDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+' comments Error: '+error.message+'<br>';
+        else result2Div.innerHTML += Date.now()+' - req.id:'+uniqueId+' comments id:'+data.id+' - '+data.name+'<br>';
       },
     });
   }
 
   const starttime = Date.now();
+  const abortOnError = checkAbortOnError.checked;
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch({ progressCallback })
-  .then(function (data) {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      if (errors.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: errors not empty: "+JSON.stringify(errors)+"<br>";}
-      if (results.length > 0 ) {progressDiv.innerHTML += Date.now()+" ERROR: results not empty: "+JSON.stringify(results)+"<br>";}
-      progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
+  fetcher.concurrentFetch({ progressCallback, abortOnError })
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          progressDiv.innerHTML += Date.now()+' First error raised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+      } else {
+          progressDiv.innerHTML += Date.now()+' NO ERRORS!<br>';
+      }
+      progressDiv.innerHTML += Date.now()+' ALL PROCESSING IS COMPLETED NOW! TOOK: '+(Date.now()-starttime)+'ms.<br>';
   })
   .catch((e) => {
-      progressDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message;
+      console.error(e);
+      progressDiv.innerHTML += Date.now()+' ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! '+e.message;
   });
 }
 
@@ -111,47 +123,52 @@ runWithoutCallback.onclick = async function runWithoutCallback() {
   result2Div.innerHTML = '';
   errorDiv.innerHTML = '';
   const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
-    progressDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+": "+completed+"/"+total+"<br>";
+    progressDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+': '+completed+'/'+total+'<br>';
   };
   const requests = [];
   for (let ii = 0, reqid = 0; ii < noofreq && ii < 100 && ii < (500-getidno); ii++) {
     reqid = getidno+ii;
     requests.push(
-        { url: "https://jsonplaceholder.typicode.com/comments/"+reqid },
-        { url: "https://jsonplaceholder.typicode.com/photos/"+reqid }
+        { url: 'https://jsonplaceholder.typicode.com/comments/'+reqid },
+        { url: 'https://jsonplaceholder.typicode.com/photos/'+reqid }
     );
   }
   const starttime = Date.now();
+  const abortOnError = checkAbortOnError.checked;
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch({ progressCallback })
-  .then((data) => {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      // Access individual results from the data.results and data.errors arrays
-      if (errors.length > 0) {
-          progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
-          // errors[n] == {uniqueId, url, error}
-          for (let ii = 0; ii < errors.length; ii++) {
-              const err = errors[ii];
-              errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+"<br>";
-          }
-      }
-      if (results.length > 0) {
-          for (let ii = 0; ii < results.length; ii++) {
-          const data = results[ii];
-          if (data.name) {
-              result2Div.innerHTML += Date.now()+" - result.count:"+ii+" comments id:"+data.id+" - "+data.name+"<br>";
+  fetcher.concurrentFetch({ progressCallback, abortOnError })
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          progressDiv.innerHTML += Date.now()+' First error raised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          const rejected = fetchResult.filter(answer => answer.status === 'rejected');
+          if (rejected.length > 0 ) {
+              progressDiv.innerHTML += Date.now()+' Detailed errors: '+JSON.stringify(rejected)+'<br>';
           } else {
-              result1Div.innerHTML += Date.now()+" - result.count:"+ii+" photos id:"+data.id+" - "+data.title+"<br>";
+              progressDiv.innerHTML += Date.now()+' THIS SHOULD NOT HAPPEN! firstErrorRaised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
           }
-        }
       } else {
-          progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
+          progressDiv.innerHTML += Date.now()+' NO ERRORS!<br>';
       }
-      progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
+      let gotData = false;
+      for (let i = 0; i < fetchResult.length; i++) {
+          if (fetchResult[i].status !== 'rejected') {
+              gotData = true;
+              const dataContent = fetchResult[i].value; 
+              if (dataContent.data.name) {
+                  result2Div.innerHTML += Date.now()+' - req.id:'+dataContent.id+' comments id:'+dataContent.data.id+' - '+dataContent.data.name+'<br>';
+              } else {
+                  result1Div.innerHTML += Date.now()+' - req.id:'+dataContent.id+' photos id:'+dataContent.data.id+' - '+dataContent.data.title+'<br>';
+              }
+          }
+      }
+      if (!gotData) {
+          progressDiv.innerHTML += Date.now()+' RESULT IS EMPTY (which is NOT expected) <br>';
+      }
+      progressDiv.innerHTML += Date.now()+' ALL PROCESSING IS COMPLETED NOW! TOOK: '+(Date.now()-starttime)+'ms.<br>';
   })
   .catch((e) => {
-      progressDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message;
+      console.error(e);
+      progressDiv.innerHTML += Date.now()+' ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! '+e.message;
   });
 }
 
@@ -162,64 +179,68 @@ runWithHeadersAndFail.onclick = async function runWithHeadersAndFail() {
   result2Div.innerHTML = '';
   errorDiv.innerHTML = '';
   const progressCallback = (uniqueId, completed, total, byteComplete, byteTotal) => {
-    progressDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+": "+completed+"/"+total+"<br>";
+    progressDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+': '+completed+'/'+total+'<br>';
   };
   const requests = [
-    { url: "https://httpbin.org/headers",
+    { url: 'https://httpbin.org/headers',
       fetchOptions: {
-        credentials: "include",
-        method: "GET",
+        credentials: 'include',
+        method: 'GET',
         headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json; charset=utf-8",
-          "Accept-Language": "de, en-gb;q=0.8, en;q=0.7"
+          'Accept': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept-Language': 'de, en-gb;q=0.8, en;q=0.7'
         }
       },
       callback: (uniqueId, data, error, abortManager) => {
-        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+"<br>";
-        else result1Div.innerHTML += Date.now()+" - req.id:"+uniqueId+" headers:"+JSON.stringify(data)+"<br>";
+        if (error) errorDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+' Callback got error: '+JSON.stringify(error)+'<br>';
+        else result1Div.innerHTML += Date.now()+' - req.id:'+uniqueId+' headers:'+JSON.stringify(data)+'<br>';
       }
     },
-    { url: "https://jsonplaceholder.typicode.com/invalid-url", fetchOptions: { headers: { "mode": "cors" } } },
-    { url: "https://jsonplaceholder.typicode.com/invalid-url/",
-      fetchOptions: { method: "GET", headers: { "Accept": "multipart/form-data" } },
+    { url: 'https://jsonplaceholder.typicode.com/invalid-url', fetchOptions: { headers: { 'mode': 'cors' } } },
+    { url: 'https://jsonplaceholder.typicode.com/invalid-url/',
+      fetchOptions: { method: 'GET', headers: { 'Accept': 'multipart/form-data' } },
       maxRetries: 1,
       statusCodesToRetry: [[100, 199], [404, 429], [500, 599]],
       callback: (uniqueId, data, error, abortManager) => {
-        if (error) errorDiv.innerHTML += Date.now()+" - req.id:"+uniqueId+" errors Error: "+JSON.stringify(error)+" - "+error.message+"<br>";
-        else result1Div.innerHTML += Date.now()+" - req.id:"+uniqueId+" results id:"+data.id+" - "+data.name+"<br>";
+        if (error) errorDiv.innerHTML += Date.now()+' - req.id:'+uniqueId+' Callback got error: '+JSON.stringify(error)+' - '+error.message+'<br>';
+        else result1Div.innerHTML += Date.now()+' - req.id:'+uniqueId+' results id:'+data.id+' - '+data.name+'<br>';
       }
     }
   ];
 
   const starttime = Date.now();
+  const abortOnError = checkAbortOnError.checked;
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
-  fetcher.concurrentFetch({ progressCallback })
-  .then(function (data) {
-      const errors = data.errors ?? {};
-      const results = data.results ?? {};
-      // Access individual results from the data.results and data.errors arrays
-      if (errors.length > 0) {
-          progressDiv.innerHTML += Date.now()+" - Error has occurred!<br>";
-          // errors[n] == {uniqueId, url, error}
-          for (let ii = 0; ii < errors.length; ii++) {
-              const err = errors[ii];
-              errorDiv.innerHTML += Date.now()+" - req.id:"+err.uniqueId+" - error.count:"+ii+" results Error: "+JSON.stringify(err.error)+" - "+err.error.message+"<br>";
-          }
-      }
-      if (results.length > 0) {
-          progressDiv.innerHTML += Date.now()+" - Result is ready:<br>";
-          for (let ii = 0; ii < results.length; ii++) {
-              const data = results[ii];
-              result2Div.innerHTML += Date.now()+" - result.count:"+ii+" JSON:"+JSON.stringify(data)+"<br>";
+  fetcher.concurrentFetch({ progressCallback, abortOnError })
+  .then((fetchResult) => {
+      if (fetcher.getErrorRaised()) {
+          progressDiv.innerHTML += Date.now()+' First error raised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
+          const rejected = fetchResult.filter(answer => answer.status === 'rejected');
+          if (rejected.length > 0 ) {
+              progressDiv.innerHTML += Date.now()+' Detailed errors: '+JSON.stringify(rejected)+'<br>';
+          } else {
+              progressDiv.innerHTML += Date.now()+' THIS SHOULD NOT HAPPEN! firstErrorRaised: '+JSON.stringify(fetcher.getErrorRaised())+'<br>';
           }
       } else {
-          progressDiv.innerHTML += Date.now()+" - Result is empty!<br>";
+          progressDiv.innerHTML += Date.now()+' NO ERRORS!<br>';
       }
-      progressDiv.innerHTML += Date.now()+" ALL PROCESSING IS COMPLETED NOW! TOOK: "+(Date.now()-starttime)+"ms.<br>";
+      let gotData = false;
+      for (let i = 0; i < fetchResult.length; i++) {
+          if (fetchResult[i].status !== 'rejected') {
+              gotData = true;
+              const dataContent = fetchResult[i].value; 
+              result2Div.innerHTML += Date.now()+' - Tracking req.id:'+dataContent.id+' JSON:'+JSON.stringify(dataContent)+'<br>';
+          }
+      }
+      if (!gotData) {
+          progressDiv.innerHTML += Date.now()+' RESULT IS EMPTY (which is NOT expected) <br>';
+      }
+      progressDiv.innerHTML += Date.now()+' ALL PROCESSING IS COMPLETED NOW! TOOK: '+(Date.now()-starttime)+'ms.<br>';
   })
   .catch((e) => {
-      progressDiv.innerHTML += Date.now()+" ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! "+e.message;
+      console.error(e);
+      progressDiv.innerHTML += Date.now()+' ERROR HAS BEEN CATCHED - WHICH SHOULD NOT HAPPEN! '+e.message;
   });
 }
 </script>
