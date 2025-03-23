@@ -20,35 +20,66 @@ npm install concurrentfetcher
 ```
 
 ## Usage
-Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. For browsers it must be in an <i>async</i> context.
-It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned.
-
-Browser example without callback (src="concurrentfetcher.iife.min.js"):
-
-**JavaScript**: [Example1](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example1.html)
+Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned. In its must simple form:
 ```javascript
-const requests = [{ url: "https://jsonplaceholder.typicode.com/photos/1" }, { url: "https://jsonplaceholder.typicode.com/comments/1" }];
-
+const requests = [
+ { url: "https://jsonplaceholder.typicode.com/photos/1" },
+ { url: "https://jsonplaceholder.typicode.com/comments/1" }
+];
 const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
 fetcher.concurrentFetch()
-.then((data) => {
-  const errors = data.errors ?? {};
-  const results = data.results ?? {};
-  if (errors.length > 0) document.write(JSON.stringify(errors));
-  if (results.length > 0) document.write(JSON.stringify(results));
+.then((fetchResults) => {
+    const reasons = fetchResults.filter(arr => arr.status === 'rejected');
+    // NB! Do not filter the fetchResults array on large objects
+    const values = fetchResults.filter(arr => arr.status !== 'rejected');
 })
 ```
-
-When data is returned without callback (as above), then data is a Promise&lt;ConcurrentFetchResults&gt; as this:
-
+The result is an array of objects, each describing the outcome of one promise in the iterable, in the order of the promises passed, regardless of completion order. This is handled by [Promise.allSettled()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled). Each outcome object has the following properties:
 ```typescript
-interface ConcurrentFetchResult {
-  results: any[]; // json, text or blob data
-  errors: { uniqueId: string; url: string | Request; error: FetchError }[];
+// for successful results:
+{ status: 'fulfilled',
+  value: {
+    id: /* unique id which identifies the request */,
+    stamp: /* timespamp set when request finished */,
+    data: /* data returned from the fetch request. Either text, json or blob data. */
+ }
 }
+// for errors:
+{ status: 'rejected',
+  reason: {
+    id: /* unique id which identifies the request */,
+    stamp: /* timespamp set when request finished */,
+    error: /* catched from the failed fetch request. */
+  }
+}
+// NB! When callbacks are being used, then data and error er left out (since they are available for the callback)
 ```
-_The errors array is added with the unique Id, the request URL and a custom FetchError which sets error.status as response.status. The result array contains what is in the Response objects_ 
+Since Promise.allSettled() only returns when <i>all</i> requests have been completed: resolved and/or rejected, you will want to use Promise.all() when the approach is more <i>all or nothing</i>.
 
+ConcurrentFetcher supports the option of aborting all further processing on the first error. This is to mimic the behavior of Promise.all(). The boolean parameter `abortOnError` for the `concurrentFetch()` method controls this. If set and an error occurs, all further processing is aborted. The final response is - though - as Promise.allSettled() complete with all resolved and rejected responses. To identify the initial/first error raised, the instance method `getErrorRaised()` - returns a single reason object: { id, stamp, error } - which is as above.
+
+Browser example without callback (src="concurrentfetcher.iife.min.js"):
+**JavaScript**: [Example1](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example1.html)
+```javascript
+const requests = [
+ { url: "https://jsonplaceholder.typicode.com/photos/1" },
+ { url: "https://jsonplaceholder.typicode.com/comments/1" }
+];
+const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
+fetcher.concurrentFetch({ abortOnError: true })
+.then((fetchResults) => {
+  if (fetcher.getErrorRaised()) { console.log(fetcher.getErrorRaised()); }
+  for (let i = 0; i < fetchResults.length; i++) {
+    if (fetchResults[i].status === 'rejected') {
+      const { id, stamp, error } = fetchResults[i].reason;
+      document.write(error.toString());
+    } else {
+      const { id, stamp, data } = fetchResults[i].value;
+      document.write(JSON.stringify(data));
+    }
+  }
+})
+```
 Same currentFetch example, but with callback (src="concurrentfetcher.iife.min.js"):
 
 **JavaScript**: [Example2](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example2.html)
@@ -72,18 +103,18 @@ const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
 fetcher.concurrentFetch()
 ...
 ```
-
 Hosted in Node.js with: concurrentfetcher.umd.min.js
-
 **JavaScript**: [Node.js](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/get/index.html)
 ```javascript
 const people  = document.getElementById('people');
 const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
 fetcher.concurrentFetch()
-.then((data) => {
-  // you should handle if (data.errors.length > 0)
-  if (data.results.length > 0) {
-    people.innerHTML = data.results[0].map((person) => {
+.then((fetchResults) => {
+  const errors = fetchResults.filter(answer => answer.status === 'rejected');
+  if (errors.length > 0) { /* Do something about the errors */ }
+  const results = fetchResults.filter(answer => answer.status !== 'rejected');
+  if (results.length > 0) {
+    people.innerHTML = results[0].value.data.map((person) => {
       return (
         '<div class="text-center mt-3">'+
           '<h5 class="mt-2 mb-0">'+person.name+'</h5>'+
@@ -98,9 +129,7 @@ fetcher.concurrentFetch()
 })
 .catch(error => console.error(error));  
 ```
-
 Loaded in RequireJS with: concurrentfetcher.amd.min.js
-
 **JavaScript**: [RequireJS](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/amd/index.html)
 ```javascript
 requirejs.config({ paths: { ConcurrentFetcher: '/concurrentfetcher.amd.min' }});
@@ -116,12 +145,15 @@ requirejs(['ConcurrentFetcher'], function (ConcurrentFetcher) {
   ];
   const fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
   fetcher.concurrentFetch()
-  .then(function (data) {
-      if (data.results.length > 0) {
-          user = data.results[0];
-          document.getElementById('useravatar').src = user.avatar_url;
-          document.getElementById('username').innerHTML = user.login;
-      }
+  .then((fetchResults) => {
+    const errors = fetchResults.filter(answer => answer.status === 'rejected');
+    if (errors.length > 0) { /* Do something about the errors */ }
+    const results = fetchResults.filter(answer => answer.status !== 'rejected');
+    if (results.length > 0) {
+      user = results[0].value.data;
+      document.getElementById('useravatar').src = user.avatar_url;
+      document.getElementById('username').innerHTML = user.login;
+    }
   })
 ```
 ## Documentation:
