@@ -91,7 +91,7 @@ export declare class ConcurrentFetcher {
     private abortManager;
     private firstErrorRaised;
     /**
-     * @param {array} requests - An array of:
+     * @param {array} RequestItem[] - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
      *   - a string containing the URL
      *   - an object, such an instance of URL, which has a stringifier that produces a string containing the URL
@@ -101,14 +101,14 @@ export declare class ConcurrentFetcher {
      *   - uniqueId: Either the supplied Request Id or the generated Id.
      *   - data: result from the request. Is null when an error is raised.
      *   - error: If not null, then an error have occurred for that request
-     *   - abortManager: Only to be used when aborting all subsequent fetch processing: abortManager.abortAll();
-     * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to navigate.
-     *   - Generated if not given. Known as uniqueId throughout the solution.
+     *   - abortManager: To be used when aborting all subsequent fetch processing: abortManager.abortAll();
+     * - (optional) Request Id: Must identify each request uniquely. Required for error handling and for the caller or callback to refer each request.
+     *   - Generated if not given. Known as id/uniqueId throughout the solution.
      * - (optional) maxRetries: failed requests will retry up to maxRetries times with a retryDelay between each retry. Defaults to 0 (zero) meaning no retries.
      * - (optional) statusCodesToRetry: The HTTP response status codes that will automatically be retried.
      *   - Defaults to: [[100, 199], [429, 429], [500, 599]]
      * - (optional) retryDelay: delay in ms between each retry. Defaults to 1000 = 1 second.
-     * - (optional) abortTimeout: automatically abort the request after this specified time (in ms).
+     * - (optional) abortTimeout: automatically aborts the request after this specified time (in ms).
      * - (optional) forceReader: Reads response.body instead of either text, json or blob data. Defaults to false. See also cutoffAmount.
      * - (optional) cutoffAmount: when response content is bigger than cutoffAmount (in KB!) - then response.body will be read in chunks. AND The result will be a blob object (even when reading text and json!). Defaults to 0 (zero) - meaning: no special treatment.
      *   - blob data will be read in chunks if either forceReader (is true) or cutoffAmount (is reached).
@@ -125,16 +125,25 @@ export declare class ConcurrentFetcher {
      */
     fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, forceReader: boolean, cutoffAmount: number, progressCallback: myprogressCallback | undefined, countRetries?: number): Promise<T>;
     /**
-     * This is the core method that performs concurrent fetching.
-     * @param {callback} progressCallback - (optional):
+     * This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
+     * $param {progressCallback?, abortOnError?} - ConcurrentFetchOptions
      * - progressCallback?:
-     *   - uniqueId: string
-     *   - completedRequestCount: number
-     *   - totalRequestCount: number
-     * @returns {Promise<ConcurrentFetchResponse>} - A Promise of an array of ConcurrentFetchResponse: results and errors:
-     * - ConcurrentFetchResponse[]:
-     *  - results: any[];
-     *  - errors: { uniqueId: string; url: string | Request; error: Error }[];
+     *   - uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
+     *   - completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)
+     *   - totalRequestCount: number // The total number requests. Is 0 when chunks are being read.
+     *   - completedByteCount: number //  Counts number of completed chunk bytes read. Is 0 when reporting completedRequestCount.
+     *   - totalByteCount: number // The total number of bytes being read. Can be 0!. Is 0 when reporting totalRequestCount.
+     * - abortOnError?: boolean - (optional): If true then all further processing will be aborted on the first error raised.
+     * @returns {PromiseFulfilledResult<ConcurrentFetchResponse>} - A PromiseFulfilledResult of ConcurrentFetchResponse:
+     * - PromiseFulfilledResult<ConcurrentFetchResponse>[]:
+     *   - status: string; // Either 'rejected' or 'fulfilled'
+     *   - value: ConcurrentFetchResponse;
+     * - ConcurrentFetchResponse:
+     *   - id: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
+     *   - stamp: number // Timestamp set when request finish
+     *   - data?: any // Response from the request. Only available on 'fulfilled' requests - that are not handled by callback
+     *   - error?: Error // Error object from the request. Only available on 'rejected' requests - that are not handled by callback
+     *   - message?: string // Error.message from the request. Only available on 'rejected' requests - that are not handled by callback
      */
     concurrentFetch({ progressCallback, abortOnError }?: ConcurrentFetchOptions): Promise<any[]>;
     /**
