@@ -162,7 +162,7 @@ export class ConcurrentFetcher {
   //};
 
   /**
-   * @param {array} RequestItem[] - An array of:
+   * @param {array} RequestItem - An array of:
    * - URL: the URL (or resource) for the fetch request. This can be any one of:
    *   - a string containing the URL
    *   - an object, such an instance of URL, which has a stringifier that produces a string containing the URL
@@ -194,19 +194,21 @@ export class ConcurrentFetcher {
     if (reqLen < 1) {
       throw this.CommonError('ArgumentEmpty', 'requests');
     }
-    const reqArray = [];
+    const reqArr = [];
+    // When requestId is not set, then uniqueId is made from the index => hence the push(i)
+    // Fails when requestId is set to a number (0=>number<reqlen) that collides with the index.
     for (let i = 0; i < reqLen; i++) {
-      reqArray.push(i);
+      reqArr.push(i);
     }
     for (let i = 0; i < reqLen; i++) {
       if (requests[i].requestId) {
-        if (reqArray.includes(requests[i].requestId)) {
+        if (reqArr.includes(requests[i].requestId)) {
           throw this.CommonError(
             'DuplicateKey',
             'requestId = ' + requests[i].requestId,
           );
         } else {
-          reqArray.push(requests[i].requestId);
+          reqArr.push(requests[i].requestId);
         }
       }
     }
@@ -242,10 +244,7 @@ export class ConcurrentFetcher {
   ): Promise<T> {
     let responseStatus = 200;
     try {
-      const _url =
-        typeof Request !== 'undefined' && url instanceof Request
-          ? url.clone()
-          : url;
+      const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
       const response = await fetch(_url, fetchWithSignal);
       ////console.log("response.statusText =", response.statusText);
       ////console.log("response.userFinalURL =", response.useFinalURL);
@@ -393,7 +392,7 @@ export class ConcurrentFetcher {
   /**
    * This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
    * @param {ConcurrentFetchOptions} - Object with named parameters: {progressCallback?, abortOnError?} 
-   * - progressCallback?:
+   * - progressCallback?: callback - (optional)
    *   - uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
    *   - completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)
    *   - totalRequestCount: number // The total number requests. Is 0 when chunks are being read.
@@ -434,14 +433,8 @@ export class ConcurrentFetcher {
         forceReader = false,
         cutoffAmount = 0,
       } = request;
-      const uniqueId = requestId ?? index.toString();
-      const abortSignal =
-        abortTimeout > 0
-          ? AbortSignal.any([
-            this.abortManager.createSignal(uniqueId),
-            AbortSignal.timeout(abortTimeout),
-          ])
-          : this.abortManager.createSignal(uniqueId);
+      const uniqueId = requestId ? requestId.toString() : index.toString();
+      const abortSignal = (abortTimeout > 0) ? AbortSignal.any([ this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout), ]) : this.abortManager.createSignal(uniqueId);
 
       // Default options (can be overridden)
       // including Representation header: Content-Type

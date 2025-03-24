@@ -28,7 +28,7 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>ConcurrentFetcher<span class="signature">(RequestItem[)</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>ConcurrentFetcher<span class="signature">(RequestItem)</span><span class="type-signature"></span></h2>
         
             <div class="class-description"><p>ConcurrentFetcher class, which manages concurrent fetch requests and cancellation.</p>
 <p>Built upon:</p>
@@ -50,7 +50,7 @@
     
 
     
-    <h4 class="name" id="ConcurrentFetcher"><span class="type-signature"></span>new ConcurrentFetcher<span class="signature">(RequestItem[)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="ConcurrentFetcher"><span class="type-signature"></span>new ConcurrentFetcher<span class="signature">(RequestItem)</span><span class="type-signature"></span></h4>
     
 
     
@@ -90,7 +90,7 @@
 
         <tr>
             
-                <td class="name"><code>RequestItem[</code></td>
+                <td class="name"><code>RequestItem</code></td>
             
 
             <td class="type">
@@ -310,7 +310,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line543">line 543</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line538">line 538</a>
     </li></ul></dd>
     
 
@@ -399,7 +399,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line530">line 530</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line525">line 525</a>
     </li></ul></dd>
     
 
@@ -488,7 +488,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line537">line 537</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line532">line 532</a>
     </li></ul></dd>
     
 
@@ -582,7 +582,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
 
             <td class="description last"><p>Object with named parameters: {progressCallback?, abortOnError?}</p>
 <ul>
-<li>progressCallback?:
+<li>progressCallback?: callback - (optional)
 <ul>
 <li>uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.</li>
 <li>completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)</li>
@@ -760,7 +760,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line147">line 147</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line149">line 149</a>
     </li></ul></dd>
     
 
@@ -848,7 +848,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line446">line 446</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line441">line 441</a>
     </li></ul></dd>
     
 
@@ -936,7 +936,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line400">line 400</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line395">line 395</a>
     </li></ul></dd>
     
 
@@ -1024,7 +1024,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line153">line 153</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line155">line 155</a>
     </li></ul></dd>
     
 
@@ -1112,7 +1112,7 @@ see <a href="AbortManager.html">AbortManager</a></p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line504">line 504</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line499">line 499</a>
     </li></ul></dd>
     
 
@@ -1201,7 +1201,7 @@ Based on the response.status and the statusCodesToRetry configured.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line512">line 512</a>
+        <a href="concurrentfetcher.js.html">concurrentfetcher.js</a>, <a href="concurrentfetcher.js.html#line507">line 507</a>
     </li></ul></dd>
     
 

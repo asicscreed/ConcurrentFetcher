@@ -88,7 +88,7 @@ class ConcurrentFetcher {
     //  unAuthorized: 'You are not authorized to use this function',
     //};
     /**
-     * @param {array} RequestItem[] - An array of:
+     * @param {array} RequestItem - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
      *   - a string containing the URL
      *   - an object, such an instance of URL, which has a stringifier that produces a string containing the URL
@@ -120,17 +120,19 @@ class ConcurrentFetcher {
         if (reqLen < 1) {
             throw this.CommonError('ArgumentEmpty', 'requests');
         }
-        const reqArray = [];
+        const reqArr = [];
+        // When requestId is not set, then uniqueId is made from the index => hence the push(i)
+        // Fails when requestId is set to a number (0=>number<reqlen) that collides with the index.
         for (let i = 0; i < reqLen; i++) {
-            reqArray.push(i);
+            reqArr.push(i);
         }
         for (let i = 0; i < reqLen; i++) {
             if (requests[i].requestId) {
-                if (reqArray.includes(requests[i].requestId)) {
+                if (reqArr.includes(requests[i].requestId)) {
                     throw this.CommonError('DuplicateKey', 'requestId = ' + requests[i].requestId);
                 }
                 else {
-                    reqArray.push(requests[i].requestId);
+                    reqArr.push(requests[i].requestId);
                 }
             }
         }
@@ -153,9 +155,7 @@ class ConcurrentFetcher {
     async fetchWithRetry(url, fetchWithSignal, uniqueId, maxRetries, statusCodesToRetry, retryDelay, forceReader, cutoffAmount, progressCallback, countRetries = 0) {
         let responseStatus = 200;
         try {
-            const _url = typeof Request !== 'undefined' && url instanceof Request
-                ? url.clone()
-                : url;
+            const _url = (typeof Request !== 'undefined' && url instanceof Request) ? url.clone() : url;
             const response = await fetch(_url, fetchWithSignal);
             ////console.log("response.statusText =", response.statusText);
             ////console.log("response.userFinalURL =", response.useFinalURL);
@@ -251,8 +251,8 @@ class ConcurrentFetcher {
     }
     /**
      * This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
-     * $param {progressCallback?, abortOnError?} - ConcurrentFetchOptions
-     * - progressCallback?:
+     * @param {ConcurrentFetchOptions} - Object with named parameters: {progressCallback?, abortOnError?}
+     * - progressCallback?: callback - (optional)
      *   - uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
      *   - completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)
      *   - totalRequestCount: number // The total number requests. Is 0 when chunks are being read.
@@ -278,13 +278,8 @@ class ConcurrentFetcher {
         this.firstErrorRaised = null;
         const fetchPromises = this.requests.map((request, index) => {
             const { url, fetchOptions = {}, callback = null, requestId = null, maxRetries = 0, statusCodesToRetry = [[100 - 199], [429 - 429], [500 - 599]], retryDelay = 1000, abortTimeout = 0, forceReader = false, cutoffAmount = 0, } = request;
-            const uniqueId = requestId !== null && requestId !== void 0 ? requestId : index.toString();
-            const abortSignal = abortTimeout > 0
-                ? AbortSignal.any([
-                    this.abortManager.createSignal(uniqueId),
-                    AbortSignal.timeout(abortTimeout),
-                ])
-                : this.abortManager.createSignal(uniqueId);
+            const uniqueId = requestId ? requestId.toString() : index.toString();
+            const abortSignal = (abortTimeout > 0) ? AbortSignal.any([this.abortManager.createSignal(uniqueId), AbortSignal.timeout(abortTimeout),]) : this.abortManager.createSignal(uniqueId);
             // Default options (can be overridden)
             // including Representation header: Content-Type
             const defaultOptions = {

@@ -91,7 +91,7 @@ export declare class ConcurrentFetcher {
     private abortManager;
     private firstErrorRaised;
     /**
-     * @param {array} RequestItem[] - An array of:
+     * @param {array} RequestItem - An array of:
      * - URL: the URL (or resource) for the fetch request. This can be any one of:
      *   - a string containing the URL
      *   - an object, such an instance of URL, which has a stringifier that produces a string containing the URL
@@ -127,7 +127,7 @@ export declare class ConcurrentFetcher {
     /**
      * This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
      * @param {ConcurrentFetchOptions} - Object with named parameters: {progressCallback?, abortOnError?}
-     * - progressCallback?:
+     * - progressCallback?: callback - (optional)
      *   - uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
      *   - completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)
      *   - totalRequestCount: number // The total number requests. Is 0 when chunks are being read.

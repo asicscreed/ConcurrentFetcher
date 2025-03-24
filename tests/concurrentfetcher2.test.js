@@ -244,10 +244,15 @@ describe('ConcurrentFetcher', () => {
             {url: 'https://example.com/api/8', requestId: 'req18'},
             {url: 'https://example.com/api/9', requestId: 'req19'}
       ];
+      let errorThrown = null;
       try {
           fetcher = new ConcurrentFetcher.ConcurrentFetcher(requests);
       } catch (error) {
-          expect(error.message).toEqual('Duplicate key: requestId = req16');
+          errorThrown = error;
+      }
+      expect(errorThrown).toBeInstanceOf(Error);
+      if (errorThrown instanceof Error) {
+        expect(errorThrown.message).toEqual('Duplicate key: requestId = req16');
       }
     });
 });

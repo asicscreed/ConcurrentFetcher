@@ -26,6 +26,7 @@
     "docs": "node_modules/.bin/jsdoc -c jsdoc.conf.json",
     "rollup": "node_modules/.bin/rollup -c rollup.config.mjs",
     "lint": "npx eslint src/concurrentfetcher.ts",
+    "hint": "node_modules/.bin/jshint dist/concurrentfetcher.js",
     "format": "npx prettier src/concurrentfetcher.ts",
     "nodeserver": "node ./examples/node/server.mjs",
     "test": "node_modules/.bin/jest --rootDir tests"
@@ -48,6 +49,7 @@
     "google-closure-compiler": "^20240317.0.0",
     "jest": "^29.7.0",
     "jsdoc": "^4.0.4",
+    "jshint": "^2.13.6",
     "rollup": "^4.34.9",
     "tslib": "^2.8.1",
     "typescript": "^5.8.2",
