@@ -532,8 +532,55 @@ see <a href="AbortManager.html">AbortManager</a></p>
 
 
 <div class="description">
-    <p>This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
-$param {progressCallback?, abortOnError?} - ConcurrentFetchOptions</p>
+    <p>This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.</p>
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">ConcurrentFetchOptions</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Object with named parameters: {progressCallback?, abortOnError?}</p>
 <ul>
 <li>progressCallback?:
 <ul>
@@ -545,15 +592,12 @@ $param {progressCallback?, abortOnError?} - ConcurrentFetchOptions</p>
 </ul>
 </li>
 <li>abortOnError?: boolean - (optional): If true then all further processing will be aborted on the first error raised.</li>
-</ul>
-</div>
+</ul></td>
+        </tr>
 
-
-
-
-
-
-
+    
+    </tbody>
+</table>
 
 
 

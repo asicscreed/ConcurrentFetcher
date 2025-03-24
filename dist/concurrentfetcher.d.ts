@@ -126,7 +126,7 @@ export declare class ConcurrentFetcher {
     fetchWithRetry<T>(url: string | Request, fetchWithSignal: RequestInit, uniqueId: string, maxRetries: number, statusCodesToRetry: number[][], retryDelay: number, forceReader: boolean, cutoffAmount: number, progressCallback: myprogressCallback | undefined, countRetries?: number): Promise<T>;
     /**
      * This is the core method that performs concurrent fetching. It builds an array of requests for the fetch()-method and then waits for them - via promise.allSettled() - to finish. The processing can be aborted in more ways, and this method supports 'global' abortOnError. Moreover each request can be controlled by the caller to abort single requests or all requests.
-     * $param {progressCallback?, abortOnError?} - ConcurrentFetchOptions
+     * @param {ConcurrentFetchOptions} - Object with named parameters: {progressCallback?, abortOnError?}
      * - progressCallback?:
      *   - uniqueId: string // Either set by requestId in the request array, or made as uniqueId. Can be used the refer to the request.
      *   - completedRequestCount: number // Counts number of completed requests (both 'fulfilled' and 'rejected requests). Is 0 when chunks are being read.)
