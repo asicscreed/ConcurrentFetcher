@@ -85,14 +85,6 @@ export class AbortManager {
   }
 }
 
-//export interface ShortFormResultValue {
-//  id: string,
-//  stamp: number,
-//  cbError?: Error,
-//  error?: Error,
-//  data?: any
-//}
-
 export interface ConcurrentFetchResponse {
   id: string;
   stamp: number;
@@ -128,12 +120,6 @@ export interface RequestItem {
   cutoffAmount?: number;
 }
 
-//export interface ConcurrentFetchResponse {
-//    id: string,
-//    data?: any,
-//    stamp?: number;
-//    cbError?: Error;
-//}
 //export interface ConcurrentFetchResponse {
 // results could also be { uniqueId: string; data: any }[];
 //  results: any[];
@@ -529,13 +515,11 @@ export class ConcurrentFetcher {
         .finally(() => {
           completedCount++;
           if (progressCallback && !_abortedOnError) {
-            progressCallback(
-              uniqueId,
-              completedCount,
-              this.requests.length,
-              0,
-              0,
-            );
+            try {
+              progressCallback(uniqueId, completedCount, this.requests.length, 0, 0);
+            } catch (pcbErr) {
+              console.log('ProgressCallback failed: ', pcbErr);
+            }
           }
         });
     });
@@ -593,13 +577,21 @@ export class ConcurrentFetcher {
     while ((({ done, value } = await reader.read()), !done)) {
       textChunks += decoder.decode(value, { stream: true });
       if (progressCallback) {
-        progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+        try {
+          progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+        } catch (pcbErr) {
+          console.log('ProgressCallback failed: ', pcbErr);
+        }
       }
     }
     // empty buffer...
     textChunks += decoder.decode();
     if (progressCallback) {
-      progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+      try {
+        progressCallback(uniqueId, 0, 0, textChunks.length, contentLength);
+      } catch (pcbErr) {
+        console.log('ProgressCallback failed: ', pcbErr);
+      }
     }
     if (fetchType == 'json') {
       try {
@@ -650,7 +642,11 @@ export class ConcurrentFetcher {
         chunks.push(value);
         receivedLength += value.length;
         if (progressCallback) {
-          progressCallback(uniqueId, 0, 0, receivedLength, contentLength);
+          try {
+            progressCallback(uniqueId, 0, 0, receivedLength, contentLength);
+          } catch (pcbErr) {
+            console.log('ProgressCallback failed: ', pcbErr);
+          }
         }
       }
       const allChunks = new Uint8Array(receivedLength);
