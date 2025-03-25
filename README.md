@@ -20,7 +20,7 @@ npm install concurrentfetcher
 ```
 
 ## Usage
-Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned. In its must simple form:
+Basically, you instantiate the class with an array of fetch requests and then call `concurrentFetch()`. It calls fetch and consumes the Response object. If a callback is defined, it is called for each response. Without a callback, the responses (data and errors, respectively) are collected and returned. Like this:
 ```javascript
 const requests = [
  { url: "https://jsonplaceholder.typicode.com/photos/1" },
@@ -54,11 +54,12 @@ The result is an array of objects, each describing the outcome of one promise in
 }
 // NB! When callbacks are being used, then data and error er left out (since they are available for the callback)
 ```
-Since Promise.allSettled() only returns when <i>all</i> requests have been completed: resolved and/or rejected, you will want to use Promise.all() when the approach is more <i>all or nothing</i>.
+Since Promise.allSettled() only returns when <i>all</i> requests have been completed: resolved and/or rejected, Promise.all() is being used, when the approach is more <i>all or nothing</i>.
 
-ConcurrentFetcher supports the option of aborting all further processing on the first error. This is to mimic the behavior of Promise.all(). The boolean parameter `abortOnError` for the `concurrentFetch()` method controls this. If set and an error occurs, all further processing is aborted. The final response is - though - as Promise.allSettled() complete with all resolved and rejected responses. To identify the initial/first error raised, the instance method `getErrorRaised()` - returns a single reason object: { id, stamp, error } - which is as above.
+ConcurrentFetcher supports the option of aborting all further processing on the first error. This is to mimic the behavior of Promise.all(). The boolean named parameter `abortOnError` for the `concurrentFetch()` method controls this. If set and an error occurs, all further processing is aborted. The final response is - though - as Promise.allSettled() complete with all resolved and rejected responses. To identify the initial/first error raised, the instance method `getErrorRaised()` - returns a single reason object: { id, stamp, error } - as above.
 
 Browser example without callback (src="concurrentfetcher.iife.min.js"):
+
 **JavaScript**: [Example1](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/browser/example1.html)
 ```javascript
 const requests = [
@@ -104,6 +105,7 @@ fetcher.concurrentFetch()
 ...
 ```
 Hosted in Node.js with: concurrentfetcher.umd.min.js
+
 **JavaScript**: [Node.js](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/get/index.html)
 ```javascript
 const people  = document.getElementById('people');
@@ -130,6 +132,7 @@ fetcher.concurrentFetch()
 .catch(error => console.error(error));  
 ```
 Loaded in RequireJS with: concurrentfetcher.amd.min.js
+
 **JavaScript**: [RequireJS](https://github.com/asicscreed/ConcurrentFetcher/tree/main/examples/node/amd/index.html)
 ```javascript
 requirejs.config({ paths: { ConcurrentFetcher: '/concurrentfetcher.amd.min' }});
